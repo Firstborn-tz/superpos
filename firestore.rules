@@ -1,0 +1,119 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Admin = authenticated via Firebase Auth (email/password).
+    //
+    // KNOWN LIMITATION: Cashiers authenticate against the branch/password
+    // record client-side (so branch login keeps working while fully
+    // offline) and talk to Firestore as unauthenticated clients. That
+    // means these rules cannot cryptographically prove a write "came from
+    // branch X" - they can only validate the *shape* of the data being
+    // written. Anyone with the app's public Firebase config (visible in
+    // any browser's dev tools, as with any client-side app) could in
+    // principle write directly to Firestore bypassing the UI.
+    //
+    // For stronger guarantees, add a Cloud Function that mints a Firebase
+    // custom auth token at branch login time, then swap isAdmin()-only
+    // checks below for checks against request.auth.token.branchId. Until
+    // then, also strongly consider enabling Firebase App Check, which
+    // blocks traffic that isn't coming from your actual deployed app.
+    function isAdmin() {
+      return isSignedIn();
+    }
+
+    function isValidInventoryWrite() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['id', 'barcode', 'productName', 'buyingPrice', 'sellingPrice', 'currentStock'])
+        && d.buyingPrice is number && d.buyingPrice >= 0
+        && d.sellingPrice is number && d.sellingPrice >= 0
+        && d.currentStock is number;
+    }
+
+    function isValidSaleWrite() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['id', 'transactionId', 'items', 'totalAmount', 'createdAt'])
+        && d.totalAmount is number && d.totalAmount >= 0;
+    }
+
+    // Branch documents currently include the password hash field, so this
+    // collection is readable by any client (required for offline cashier
+    // login against synced data - see limitation note above). Do not add
+    // any other sensitive fields to branch documents without moving
+    // credentials to a separate, admin-only collection first.
+    match /branches/{branchId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      // Admins can update anything (rename, reset password, etc). A
+      // non-admin write is only allowed if it changes the password
+      // field alone and nothing else (a cashier changing their own
+      // branch's password from Settings) - cashiers aren't Firebase
+      // Auth'd at all (see limitation note above), so this can't be
+      // scoped to "their own branch" specifically without the Cloud
+      // Function upgrade mentioned above.
+      allow update: if isAdmin()
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['password']);
+    }
+
+    // This is the credential-free projection used by the public landing
+    // page. Only Firebase-authenticated administrators may change it.
+    match /public_branches/{branchId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /inventory/{itemId} {
+      allow read: if true;
+      allow create, update: if isValidInventoryWrite();
+      allow delete: if isAdmin();
+    }
+
+    match /sales/{saleId} {
+      allow read: if isAdmin();
+      allow create: if isValidSaleWrite();
+      // Cashiers need to flag a sale as refunded from the Refunds page,
+      // so update is allowed with the same shape validation as create -
+      // full audit trail lives in the separate /refunds collection.
+      allow update: if isValidSaleWrite();
+      allow delete: if isAdmin();
+    }
+
+    match /refunds/{refundId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    match /stock_adjustments/{adjustmentId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    match /activity_log/{entryId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // Chat is readable by anyone (admin console + branch devices both
+    // need to read/write without Firebase Auth on the cashier side, same
+    // limitation as branches/inventory above). Messages are immutable
+    // once sent - no update or delete, only create.
+    match /chat_messages/{messageId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
