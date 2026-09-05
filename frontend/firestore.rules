@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Public pages may read location records only. These documents must never
+    // contain passwords or other internal branch data.
+    match /public_branches/{branchId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Branch records include the cashier password hash and must never be
+    // readable by anonymous visitors.
+    match /branches/{branchId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // All remaining operational records are private. Role-specific checks
+    // should be added here once cashier accounts use Firebase Auth/custom
+    // claims instead of a browser-generated session.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

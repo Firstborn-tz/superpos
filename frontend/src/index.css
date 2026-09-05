@@ -1,0 +1,221 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg-page: #f3f4f6;
+  --color-bg-card: #ffffff;
+  --color-bg-alt: #f9fafb;
+  --color-bg-hover: #f3f4f6;
+  --color-bg-hover-strong: #e5e7eb;
+  --color-text-heading: #1f2937;
+  --color-text-body: #4b5563;
+  --color-text-muted: #6b7280;
+  --color-text-faint: #9ca3af;
+  --color-border: #e5e7eb;
+  --color-border-input: #d1d5db;
+}
+
+.dark {
+  --color-bg-page: #0f1115;
+  --color-bg-card: #1a1d23;
+  --color-bg-alt: #22262e;
+  --color-bg-hover: #262a33;
+  --color-bg-hover-strong: #2f343e;
+  --color-text-heading: #f3f4f6;
+  --color-text-body: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  --color-text-faint: #6b7280;
+  --color-border: #2f343e;
+  --color-border-input: #3a4049;
+}
+
+/* Smooth theme transitions so the toggle doesn't feel jarring */
+body,
+.bg-app-card,
+.bg-app-alt,
+.border-app-border,
+.border-app-border-input {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  background-color: var(--color-bg-page);
+  color: var(--color-text-body);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #3a4049;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+/* Prevent iOS zoom-on-focus for inputs under 16px */
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Landing page animations - defined globally so Tailwind's arbitrary
+   animate-[keyframeName_...] values in LandingPage.tsx always resolve,
+   regardless of JIT keyframe-matching edge cases. */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-16px);
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cartPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes totalBump {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes checkPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+/* Printing: pages call `printElement(id, format)` which adds body classes
+   so only the relevant printable section is shown. If no print target
+   class is set, the full page prints as-is (used by Reports). */
+@media print {
+  body.print-target-active * {
+    visibility: hidden;
+  }
+  body.print-target-active .print-target,
+  body.print-target-active .print-target * {
+    visibility: visible;
+  }
+  body.print-target-active .print-target {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Thermal till-printer formatting - narrow width, monospace-leaning
+     font, tight line-height. The physical paper size (58mm/80mm) is set
+     in the printer driver/dialog, not here - browsers don't reliably
+     support conditional @page rules, so we just constrain content width
+     to look right on a narrow roll regardless of the driver's page size. */
+  @page {
+    margin: 4mm;
+  }
+  body.print-target-thermal .print-target {
+    width: 54mm;
+    max-width: 54mm;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  body.print-target-thermal .print-target * {
+    font-size: inherit !important;
+  }
+
+  /* Die-cut barcode label formatting - no page margins (a thermal label
+     printer's "page" IS the label, so any margin wastes label material
+     or misaligns the print head), content fills the label exactly, and
+     the barcode image is centered with no extra chrome around it. The
+     actual @page size in mm is injected inline by printElement() per
+     print call, since it depends on which label size the user picked. */
+  body.print-target-label {
+    margin: 0;
+  }
+  body.print-target-label .print-target {
+    margin: 0 auto;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  body.print-target-label .print-target img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+}
