@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
+import { onAuthStateChanged } from 'firebase/auth'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useDataStore } from '@/store/dataStore'
 import { syncService } from '@/services/sync/syncService'
 import { subscribeToAdminDataChanges } from '@/services/firebase/firestoreService'
+import { auth } from '@/config/firebase'
 import { useInactivityLogout } from '@/hooks/useInactivityLogout'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import ToastContainer from '@/components/common/Toast'
@@ -167,6 +169,17 @@ export default function App() {
       unsubscribe()
     }
   }, [isAuthenticated, userRole, refreshFromServer])
+
+  // Zustand restores its persisted admin session synchronously, while
+  // Firebase Auth restores its credential asynchronously. Retrying here is
+  // essential: the first server-only Firestore read may otherwise run
+  // without the Firebase credential and leave admin reports at zero.
+  useEffect(() => {
+    if (userRole !== 'admin') return
+    return onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) void refreshFromServer()
+    })
+  }, [userRole, refreshFromServer])
 
   return (
     <BrowserRouter>

@@ -30,6 +30,7 @@ interface DataState {
   addRefund: (refund: RefundRecord) => void
   addStockAdjustment: (adjustment: StockAdjustmentRecord) => void
   addActivityLogEntry: (entry: ActivityLogEntry) => void
+  clearActivityLog: () => void
 }
 
 export const useDataStore = create<DataState>((set, get) => ({
@@ -142,5 +143,9 @@ export const useDataStore = create<DataState>((set, get) => ({
     const next = [entry, ...get().activityLog].slice(0, 1000)
     set({ activityLog: next })
     writeStorage(ACTIVITY_LOG_KEY, next)
+  },
+  clearActivityLog: () => {
+    set({ activityLog: [] })
+    writeStorage(ACTIVITY_LOG_KEY, [])
   },
 }))

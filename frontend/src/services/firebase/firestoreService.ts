@@ -10,6 +10,7 @@ import {
   limit,
   onSnapshot,
   where,
+  writeBatch,
   type Unsubscribe,
 } from 'firebase/firestore'
 import { auth, db } from '@/config/firebase'
@@ -149,6 +150,17 @@ export async function pushStockAdjustment(adjustment: StockAdjustmentRecord): Pr
 
 export async function pushActivityLogEntry(entry: ActivityLogEntry): Promise<void> {
   await setDoc(doc(db, COLLECTIONS.ACTIVITY_LOG, entry.id), entry, { merge: true })
+}
+
+/** Deletes the activity log in Firestore in batches within its 500-write limit. */
+export async function clearActivityLog(): Promise<void> {
+  const snapshot = await getDocsFromServer(collection(db, COLLECTIONS.ACTIVITY_LOG))
+  const documents = snapshot.docs
+  for (let index = 0; index < documents.length; index += 500) {
+    const batch = writeBatch(db)
+    documents.slice(index, index + 500).forEach((entry) => batch.delete(entry.ref))
+    await batch.commit()
+  }
 }
 
 export async function pushChatMessage(message: ChatMessage): Promise<void> {

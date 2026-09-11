@@ -4,6 +4,8 @@ import Modal from '@/components/common/Modal'
 import StatCard from '@/components/common/StatCard'
 import { useAuthStore } from '@/store/authStore'
 import { useDataStore } from '@/store/dataStore'
+import { clearActivityLog as clearActivityLogRemote } from '@/services/firebase/firestoreService'
+import { toast } from '@/store/toastStore'
 import type { SaleRecord } from '@/types'
 import {
   formatCurrency,
@@ -251,9 +253,9 @@ const RANGES: { key: RangeKey; label: string }[] = [
 const CHART_COLORS = ['#16a34a', '#2563eb', '#f59e0b', '#ef4444', '#8b5cf6', '#0891b2', '#db2777']
 
 function AdminReports() {
-  const { sales, inventory, activityLog, branches } = useDataStore()
+  const { sales, inventory, activityLog, branches, clearActivityLog } = useDataStore()
   const [reportType, setReportType] = useState<ReportType>('sales')
-  const [range, setRange] = useState<RangeKey>('daily')
+  const [range, setRange] = useState<RangeKey>('all')
   const [branchFilter, setBranchFilter] = useState<string>('all')
   const [activeSale, setActiveSale] = useState<SaleRecord | null>(null)
 
@@ -376,6 +378,18 @@ function AdminReports() {
           Date: formatDateTime(a.createdAt),
         })),
       )
+    }
+  }
+
+  async function handleClearActivityLog() {
+    if (!window.confirm('Clear every activity log entry? This cannot be undone.')) return
+    try {
+      await clearActivityLogRemote()
+      clearActivityLog()
+      toast.success('Activity log cleared')
+    } catch (err) {
+      console.error('Could not clear activity log', err)
+      toast.error('Could not clear the activity log. Please try again.')
     }
   }
 
@@ -634,8 +648,15 @@ function AdminReports() {
 
           {reportType === 'activity' && (
             <div className="bg-app-card rounded-card shadow-card overflow-hidden">
-              <div className="px-5 py-4 border-b border-app-border">
+              <div className="px-5 py-4 border-b border-app-border flex items-center justify-between gap-3">
                 <h2 className="font-bold text-app-heading">Activity log</h2>
+                <button
+                  onClick={() => void handleClearActivityLog()}
+                  disabled={activityLog.length === 0}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-danger border border-danger/30 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Clear activity log
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
