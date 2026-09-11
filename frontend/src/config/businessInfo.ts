@@ -6,8 +6,8 @@
 export const BUSINESS_INFO = {
   name: 'Sengasu Mini Supermarket',
   tagline: 'Fresh products, everyday essentials, honest prices.',
-  phone: '0746 110 107',
-  whatsapp: '255746110107',
+  phone: '+255 712 721 721',
+  whatsapp: '+255 746 110 107',
   email: 'sengasusupermarket@gmail.com', // TODO: replace with your real email
   googleReviewUrl: 'https://g.page/r/CXDJV2tl1SVUECE/review',
   openingHours: 'Mon - Sun: 7:00 AM - 10:00 PM',
@@ -22,7 +22,7 @@ export function getGoogleReviewUrl(): string {
 
 /** Builds a Google Maps directions link from a free-text address. */
 export function getDirectionsUrl(address: string): string {
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`
+  return `https://maps.app.goo.gl/H4psKozz2kiX7uny9${encodeURIComponent(address)}`
 }
 
 /** Builds a wa.me WhatsApp chat link. */
