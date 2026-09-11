@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDocs,
+  getDocsFromServer,
   setDoc,
   deleteDoc,
   query,
@@ -12,7 +13,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore'
 import { auth, db } from '@/config/firebase'
-import type { ActivityLogEntry, Branch, ChatMessage, InventoryItem, PublicBranch, RefundRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
+import type { ActivityLogEntry, Branch, BranchSyncStatus, ChatMessage, InventoryItem, PublicBranch, RefundRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
 
 export const COLLECTIONS = {
   BRANCHES: 'branches',
@@ -25,6 +26,7 @@ export const COLLECTIONS = {
   CHAT_MESSAGES: 'chat_messages',
   ADMINS: 'admins',
   SETTINGS: 'settings',
+  BRANCH_SYNC: 'branch_sync',
 } as const
 
 export async function pullAllFromFirestore(): Promise<{
@@ -34,14 +36,19 @@ export async function pullAllFromFirestore(): Promise<{
   refunds: RefundRecord[]
   stockAdjustments: StockAdjustmentRecord[]
   activityLog: ActivityLogEntry[]
+  branchSyncs: BranchSyncStatus[]
 }> {
-  const [invSnap, salesSnap, branchSnap, refundSnap, adjSnap, logSnap] = await Promise.all([
-    getDocs(query(collection(db, COLLECTIONS.INVENTORY), orderBy('createdAt', 'desc'))),
-    getDocs(query(collection(db, COLLECTIONS.SALES), orderBy('createdAt', 'desc'))),
-    getDocs(query(collection(db, COLLECTIONS.BRANCHES), orderBy('createdAt', 'desc'))),
-    getDocs(query(collection(db, COLLECTIONS.REFUNDS), orderBy('createdAt', 'desc'))),
-    getDocs(query(collection(db, COLLECTIONS.STOCK_ADJUSTMENTS), orderBy('createdAt', 'desc'))),
-    getDocs(query(collection(db, COLLECTIONS.ACTIVITY_LOG), orderBy('createdAt', 'desc'), limit(500))),
+  // Admin information must be authoritative. getDocs() is allowed to return
+  // Firestore's persistent local cache; this method explicitly waits for the
+  // server instead.
+  const [invSnap, salesSnap, branchSnap, refundSnap, adjSnap, logSnap, syncSnap] = await Promise.all([
+    getDocsFromServer(query(collection(db, COLLECTIONS.INVENTORY), orderBy('createdAt', 'desc'))),
+    getDocsFromServer(query(collection(db, COLLECTIONS.SALES), orderBy('createdAt', 'desc'))),
+    getDocsFromServer(query(collection(db, COLLECTIONS.BRANCHES), orderBy('createdAt', 'desc'))),
+    getDocsFromServer(query(collection(db, COLLECTIONS.REFUNDS), orderBy('createdAt', 'desc'))),
+    getDocsFromServer(query(collection(db, COLLECTIONS.STOCK_ADJUSTMENTS), orderBy('createdAt', 'desc'))),
+    getDocsFromServer(query(collection(db, COLLECTIONS.ACTIVITY_LOG), orderBy('createdAt', 'desc'), limit(500))),
+    getDocsFromServer(collection(db, COLLECTIONS.BRANCH_SYNC)),
   ])
 
   return {
@@ -51,6 +58,7 @@ export async function pullAllFromFirestore(): Promise<{
     refunds: refundSnap.docs.map((d) => d.data() as RefundRecord),
     stockAdjustments: adjSnap.docs.map((d) => d.data() as StockAdjustmentRecord),
     activityLog: logSnap.docs.map((d) => d.data() as ActivityLogEntry),
+    branchSyncs: syncSnap.docs.map((d) => d.data() as BranchSyncStatus),
   }
 }
 
@@ -69,6 +77,24 @@ export async function pullPublicOperationalData(): Promise<Pick<Awaited<ReturnTy
 
 export async function pushInventoryItem(item: InventoryItem): Promise<void> {
   await setDoc(doc(db, COLLECTIONS.INVENTORY, item.id), item, { merge: true })
+}
+
+export async function pushBranchSyncStatus(status: BranchSyncStatus): Promise<void> {
+  await setDoc(doc(db, COLLECTIONS.BRANCH_SYNC, status.branchId), status, { merge: true })
+}
+
+/**
+ * Calls back only after Firestore has received a non-cache update. The
+ * caller performs a server-only pull, so admin views never replace their
+ * data with an offline cache snapshot.
+ */
+export function subscribeToAdminDataChanges(onChange: () => void): Unsubscribe {
+  const unsubs = Object.values(COLLECTIONS)
+    .filter((name) => name !== COLLECTIONS.PUBLIC_BRANCHES && name !== COLLECTIONS.ADMINS && name !== COLLECTIONS.SETTINGS)
+    .map((name) => onSnapshot(collection(db, name), (snapshot) => {
+      if (!snapshot.metadata.fromCache) onChange()
+    }, (err) => console.error('Admin data subscription error:', err)))
+  return () => unsubs.forEach((unsubscribe) => unsubscribe())
 }
 
 /**

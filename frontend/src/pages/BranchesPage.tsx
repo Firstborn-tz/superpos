@@ -7,20 +7,22 @@ import { useDataStore } from '@/store/dataStore'
 import { syncService } from '@/services/sync/syncService'
 import { logActivity } from '@/services/activity/activityService'
 import { reauthenticateAdmin } from '@/services/auth/reauthService'
+import { changeBranchPassword } from '@/services/auth/authService'
 import { toast } from '@/store/toastStore'
 import type { Branch, InventoryItem } from '@/types'
-import { formatCurrency, formatDate, generateBranchCode, generateId } from '@/utils/helpers'
+import { formatCurrency, formatDate, formatDateTime, generateBranchCode, generateId } from '@/utils/helpers'
 import { hashPassword } from '@/utils/crypto'
 import { PlusIcon, BranchesIcon, PhoneIcon, TrashIcon, BoxIcon, PrintIcon, EditIcon, LockIcon, WarningIcon } from '@/components/common/Icons'
 
 export default function BranchesPage() {
   const user = useAuthStore((s) => s.user)
-  const { branches, inventory, upsertBranch, removeBranch } = useDataStore()
+  const { branches, inventory, branchSyncs, upsertBranch, removeBranch } = useDataStore()
   const navigate = useNavigate()
   const [showAdd, setShowAdd] = useState(false)
   const [viewBranch, setViewBranch] = useState<Branch | null>(null)
   const [renameBranch, setRenameBranch] = useState<Branch | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null)
+  const [passwordResetTarget, setPasswordResetTarget] = useState<Branch | null>(null)
 
   async function handleAddBranch(data: { name: string; password: string; address: string; phone: string }) {
     const hashed = await hashPassword(data.password)
@@ -56,6 +58,14 @@ export default function BranchesPage() {
     logActivity('DELETE_BRANCH', `Deleted branch "${branch.name}" (admin password verified)`, user)
     toast.success('Branch deleted')
     setDeleteTarget(null)
+  }
+
+  async function handlePasswordReset(branch: Branch, newPassword: string) {
+    const updated = await changeBranchPassword(branch, newPassword)
+    upsertBranch(updated)
+    logActivity('PASSWORD_CHANGE', `Admin reset the cashier password for "${branch.name}"`, user)
+    toast.success(`Password reset for ${branch.name}`)
+    setPasswordResetTarget(null)
   }
 
   return (
@@ -96,6 +106,14 @@ export default function BranchesPage() {
                         <EditIcon width={16} height={16} />
                       </button>
                       <button
+                        onClick={() => setPasswordResetTarget(b)}
+                        className="p-1 text-app-faint hover:text-primary"
+                        aria-label="Reset branch password"
+                        title="Reset cashier password"
+                      >
+                        <LockIcon width={16} height={16} />
+                      </button>
+                      <button
                         onClick={() => setDeleteTarget(b)}
                         className="p-1 text-app-faint hover:text-danger"
                         aria-label="Delete branch"
@@ -112,6 +130,11 @@ export default function BranchesPage() {
                   <div className="flex items-center gap-1.5 text-sm text-app-muted mt-1">
                     <BoxIcon width={13} height={13} />
                     {productCount} products
+                  </div>
+                  <div className="text-xs text-app-faint mt-2">
+                    Last database sync: {branchSyncs.find((sync) => sync.branchId === b.id)?.lastSyncedAt
+                      ? formatDateTime(branchSyncs.find((sync) => sync.branchId === b.id)!.lastSyncedAt)
+                      : 'No synced activity yet'}
                   </div>
                   <button
                     onClick={() => setViewBranch(b)}
@@ -131,6 +154,12 @@ export default function BranchesPage() {
       <RenameBranchModal branch={renameBranch} onClose={() => setRenameBranch(null)} onSubmit={handleRename} />
 
       <DeleteBranchModal branch={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDeleteConfirmed} />
+
+      <ResetBranchPasswordModal
+        branch={passwordResetTarget}
+        onClose={() => setPasswordResetTarget(null)}
+        onSubmit={handlePasswordReset}
+      />
 
       <BranchProductsModal
         branch={viewBranch}
@@ -368,6 +397,100 @@ function DeleteBranchModal({
             className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-danger text-white hover:bg-red-600 disabled:opacity-60"
           >
             {loading ? 'Verifying...' : 'Delete Branch'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function ResetBranchPasswordModal({
+  branch,
+  onClose,
+  onSubmit,
+}: {
+  branch: Branch | null
+  onClose: () => void
+  onSubmit: (branch: Branch, newPassword: string) => Promise<void>
+}) {
+  const [adminPassword, setAdminPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  function reset() {
+    setAdminPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setError('')
+    setLoading(false)
+  }
+
+  if (!branch) return null
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    if (!adminPassword || !newPassword) {
+      setError('Enter your admin password and a new cashier password.')
+      return
+    }
+    if (newPassword.length < 6) {
+      setError('The new cashier password must be at least 6 characters.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError('The new passwords do not match.')
+      return
+    }
+
+    setLoading(true)
+    const verification = await reauthenticateAdmin(adminPassword)
+    if (!verification.ok) {
+      setLoading(false)
+      setError(verification.message ?? 'Admin password verification failed.')
+      return
+    }
+    try {
+      await onSubmit(branch!, newPassword)
+      reset()
+    } catch {
+      setLoading(false)
+      setError('Could not reset the cashier password. Please try again.')
+    }
+  }
+
+  return (
+    <Modal
+      open={!!branch}
+      onClose={() => {
+        reset()
+        onClose()
+      }}
+      title={`Reset cashier password — ${branch.name}`}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <p className="text-sm text-app-muted">
+          This replaces the existing cashier password. Give the new password to the branch cashier securely.
+        </p>
+        {error && <div className="bg-red-50 text-danger text-sm rounded-lg px-3 py-2">{error}</div>}
+        <div>
+          <label className="block text-sm font-medium text-app-body mb-1">Your admin password</label>
+          <input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} autoFocus className="w-full px-3.5 py-2.5 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-app-body mb-1">New cashier password</label>
+          <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full px-3.5 py-2.5 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-app-body mb-1">Confirm new cashier password</label>
+          <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full px-3.5 py-2.5 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+        </div>
+        <div className="flex gap-3">
+          <button type="button" onClick={() => { reset(); onClose() }} className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-app-hover text-app-body hover:bg-app-hover-strong">Cancel</button>
+          <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-primary text-white hover:bg-primary-dark disabled:opacity-60">
+            {loading ? 'Resetting...' : 'Reset password'}
           </button>
         </div>
       </form>

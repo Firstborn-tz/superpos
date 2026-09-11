@@ -35,7 +35,7 @@ const PERIODS: { key: ReportPeriod; label: string }[] = [
 
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const { inventory, sales, branches } = useDataStore()
+  const { inventory, sales, branches, branchSyncs } = useDataStore()
   const [period, setPeriod] = useState<ReportPeriod>('daily')
   const [branchFilter, setBranchFilter] = useState<string>('all')
   const [customStart, setCustomStart] = useState('')
@@ -220,6 +220,7 @@ export default function DashboardPage() {
                     <th className="text-right px-5 py-3 font-semibold">Profit</th>
                     <th className="text-right px-5 py-3 font-semibold">Items sold</th>
                     <th className="text-right px-5 py-3 font-semibold">Transactions</th>
+                    <th className="text-left px-5 py-3 font-semibold">Last database sync</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -232,6 +233,11 @@ export default function DashboardPage() {
                         <td className="px-5 py-3 text-right text-primary font-medium">{formatCurrency(bp.totalProfit)}</td>
                         <td className="px-5 py-3 text-right">{bp.itemsSold}</td>
                         <td className="px-5 py-3 text-right">{bp.transactions}</td>
+                        <td className="px-5 py-3 text-app-muted text-xs">
+                          {branchSyncs.find((sync) => sync.branchId === bp.branchId)?.lastSyncedAt
+                            ? formatDateTime(branchSyncs.find((sync) => sync.branchId === bp.branchId)!.lastSyncedAt)
+                            : 'No synced activity yet'}
+                        </td>
                       </tr>
                     ))}
                 </tbody>

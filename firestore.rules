@@ -101,6 +101,16 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // A branch device records the time at which one of its operational
+    // writes reached Firestore. The admin dashboard uses this for a clear
+    // per-branch database-sync indicator.
+    match /branch_sync/{branchId} {
+      allow read: if isAdmin();
+      allow create, update: if request.resource.data.branchId == branchId
+        && request.resource.data.lastSyncedAt is string;
+      allow delete: if isAdmin();
+    }
+
     // Chat is readable by anyone (admin console + branch devices both
     // need to read/write without Firebase Auth on the cashier side, same
     // limitation as branches/inventory above). Messages are immutable

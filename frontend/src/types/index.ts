@@ -24,6 +24,14 @@ export interface Branch {
   createdAt: string
 }
 
+/** The most recent successful database write for a branch. */
+export interface BranchSyncStatus {
+  branchId: string
+  branchName?: string
+  lastSyncedAt: string
+  lastOperation: OperationType
+}
+
 /** Location information that may safely be displayed on the public site. */
 export type PublicBranch = Omit<Branch, 'password'>
 
@@ -47,6 +55,7 @@ export interface InventoryItem {
   expiryDate: string
   batchNumber: string
   createdAt: string
+  updatedAt?: string
   branchId?: string
   branchName?: string
   // Batch-level FEFO (first-expire-first-out) tracking. Each stock

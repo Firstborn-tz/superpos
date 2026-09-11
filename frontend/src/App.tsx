@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useDataStore } from '@/store/dataStore'
 import { syncService } from '@/services/sync/syncService'
+import { subscribeToAdminDataChanges } from '@/services/firebase/firestoreService'
 import { useInactivityLogout } from '@/hooks/useInactivityLogout'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import ToastContainer from '@/components/common/Toast'
@@ -134,7 +135,11 @@ export default function App() {
   const userRole = useAuthStore((s) => s.user?.role)
 
   useEffect(() => {
-    hydrateFromCache()
+    // Cached records are only an offline fallback for cashier workflows.
+    // An administrator must wait for the authoritative server response.
+    if (useAuthStore.getState().user?.role !== 'admin') {
+      hydrateFromCache()
+    }
     void refreshFromServer()
     void syncService.syncNow()
     const interval = setInterval(() => {
@@ -148,7 +153,19 @@ export default function App() {
   // Refresh private records immediately after an administrator signs in;
   // the initial anonymous refresh intentionally fetches public data only.
   useEffect(() => {
-    if (isAuthenticated) void refreshFromServer()
+    if (!isAuthenticated) return
+    void refreshFromServer()
+    if (userRole !== 'admin') return
+
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined
+    const unsubscribe = subscribeToAdminDataChanges(() => {
+      clearTimeout(refreshTimer)
+      refreshTimer = setTimeout(() => void refreshFromServer(), 250)
+    })
+    return () => {
+      clearTimeout(refreshTimer)
+      unsubscribe()
+    }
   }, [isAuthenticated, userRole, refreshFromServer])
 
   return (

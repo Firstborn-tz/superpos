@@ -7,7 +7,7 @@ import { useDataStore } from '@/store/dataStore'
 import { syncService } from '@/services/sync/syncService'
 import { logActivity } from '@/services/activity/activityService'
 import { toast } from '@/store/toastStore'
-import type { InventoryItem, SaleRecord, StockAdjustmentReason, StockAdjustmentRecord } from '@/types'
+import type { Branch, InventoryItem, SaleRecord, StockAdjustmentReason, StockAdjustmentRecord } from '@/types'
 import {
   formatCurrency,
   formatDate,
@@ -44,7 +44,7 @@ function statusFor(item: InventoryItem) {
 
 export default function InventoryPage() {
   const user = useAuthStore((s) => s.user)
-  const { inventory, sales, upsertInventoryItem, addStockAdjustment } = useDataStore()
+  const { inventory, sales, branches, upsertInventoryItem, addStockAdjustment } = useDataStore()
   const navigate = useNavigate()
   const isAdmin = user?.role === 'admin'
 
@@ -80,6 +80,8 @@ export default function InventoryPage() {
     sellingPrice: number
     quantity: number
     expiryDate: string
+    branchId?: string
+    branchName?: string
   }) {
     const createdAt = new Date().toISOString()
     const batchNumber = generateBatchNumber()
@@ -102,8 +104,9 @@ export default function InventoryPage() {
       expiryDate: data.expiryDate,
       batchNumber,
       createdAt,
-      branchId: user?.branchId,
-      branchName: user?.branchName,
+      updatedAt: createdAt,
+      branchId: data.branchId ?? user?.branchId,
+      branchName: data.branchName ?? user?.branchName,
       batches: [initialBatch],
       hasExpiredBatches: false,
       expiredQuantity: 0,
@@ -116,12 +119,12 @@ export default function InventoryPage() {
   }
 
   function handleAddStock(item: InventoryItem, quantity: number, expiryDate: string, buyingPrice: number) {
-    const updated = addBatch(item, {
+    const updated = { ...addBatch(item, {
       quantity,
       buyingPrice,
       expiryDate,
       batchNumber: generateBatchNumber(),
-    })
+    }), updatedAt: new Date().toISOString() }
     upsertInventoryItem(updated)
     syncService.addPendingOperation('ADD_STOCK', updated)
     logActivity(
@@ -135,7 +138,7 @@ export default function InventoryPage() {
   }
 
   function handleAdjustStock(item: InventoryItem, quantityChange: number, reason: StockAdjustmentReason, note: string) {
-    const updated = adjustBatchQuantity(item, quantityChange)
+    const updated = { ...adjustBatchQuantity(item, quantityChange), updatedAt: new Date().toISOString() }
     upsertInventoryItem(updated)
     syncService.addPendingOperation('ADD_STOCK', updated)
 
@@ -232,7 +235,7 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      <AddProductModal open={showAdd} onClose={() => setShowAdd(false)} onSubmit={handleAddProduct} />
+      <AddProductModal open={showAdd} onClose={() => setShowAdd(false)} onSubmit={handleAddProduct} branches={branches} requireBranch={isAdmin} />
       <AddStockModal item={stockTarget} onClose={() => setStockTarget(null)} onSubmit={handleAddStock} />
       <AdjustStockModal item={adjustTarget} onClose={() => setAdjustTarget(null)} onSubmit={handleAdjustStock} />
       <ProductDetailModal
@@ -274,6 +277,7 @@ function AdminInventoryTable({
         <tr>
           <th className="text-left px-4 py-3 font-semibold">Barcode</th>
           <th className="text-left px-4 py-3 font-semibold">Product</th>
+          <th className="text-left px-4 py-3 font-semibold">Branch</th>
           <th className="text-right px-4 py-3 font-semibold">Buying Price</th>
           <th className="text-right px-4 py-3 font-semibold">Selling Price</th>
           <th className="text-right px-4 py-3 font-semibold">Stock</th>
@@ -285,7 +289,7 @@ function AdminInventoryTable({
       <tbody>
         {items.length === 0 ? (
           <tr>
-            <td colSpan={8} className="text-center px-4 py-10 text-app-faint">
+            <td colSpan={9} className="text-center px-4 py-10 text-app-faint">
               No products found
             </td>
           </tr>
@@ -296,6 +300,7 @@ function AdminInventoryTable({
               <tr key={item.id} className={idx % 2 === 0 ? 'bg-app-card' : 'bg-app-alt/50'}>
                 <td className="px-4 py-3 font-mono text-xs text-app-muted">{item.barcode}</td>
                 <td className="px-4 py-3 font-medium text-app-heading">{item.productName}</td>
+                <td className="px-4 py-3 text-app-muted">{item.branchName ?? 'Unassigned'}</td>
                 <td className="px-4 py-3 text-right">{formatCurrency(item.buyingPrice)}</td>
                 <td className="px-4 py-3 text-right">{formatCurrency(item.sellingPrice)}</td>
                 <td className="px-4 py-3 text-right">{item.currentStock}</td>
@@ -542,10 +547,14 @@ function AddProductModal({
   open,
   onClose,
   onSubmit,
+  branches,
+  requireBranch,
 }: {
   open: boolean
   onClose: () => void
-  onSubmit: (data: { productName: string; buyingPrice: number; sellingPrice: number; quantity: number; expiryDate: string }) => void
+  onSubmit: (data: { productName: string; buyingPrice: number; sellingPrice: number; quantity: number; expiryDate: string; branchId?: string; branchName?: string }) => void
+  branches: Branch[]
+  requireBranch: boolean
 }) {
   const [productName, setProductName] = useState('')
   const [pricingMode, setPricingMode] = useState<'per_unit' | 'bulk'>('per_unit')
@@ -555,6 +564,7 @@ function AddProductModal({
   const [sellingPrice, setSellingPrice] = useState('')
   const [quantity, setQuantity] = useState('')
   const [expiryDate, setExpiryDate] = useState('')
+  const [branchId, setBranchId] = useState('')
   const [error, setError] = useState('')
 
   // When buying in bulk (a carton/case), the buying price per unit is
@@ -577,6 +587,7 @@ function AddProductModal({
     setSellingPrice('')
     setQuantity('')
     setExpiryDate('')
+    setBranchId('')
     setError('')
   }
 
@@ -588,7 +599,7 @@ function AddProductModal({
     // carton - no need to make the cashier enter it twice.
     const qty = pricingMode === 'bulk' ? parseInt(bulkUnitCount, 10) : parseInt(quantity, 10)
 
-    if (!productName.trim() || bp === null || bp === undefined || isNaN(bp) || isNaN(sp) || isNaN(qty) || !expiryDate) {
+    if (!productName.trim() || bp === null || bp === undefined || isNaN(bp) || isNaN(sp) || isNaN(qty) || !expiryDate || (requireBranch && !branchId)) {
       setError('Please fill in all fields with valid values.')
       return
     }
@@ -596,7 +607,8 @@ function AddProductModal({
       setError('Selling price should not be lower than the buying price per unit.')
       return
     }
-    onSubmit({ productName: productName.trim(), buyingPrice: bp, sellingPrice: sp, quantity: qty, expiryDate })
+    const branch = branches.find((item) => item.id === branchId)
+    onSubmit({ productName: productName.trim(), buyingPrice: bp, sellingPrice: sp, quantity: qty, expiryDate, branchId: branch?.id, branchName: branch?.name })
     reset()
   }
 
@@ -624,6 +636,20 @@ function AddProductModal({
             placeholder="e.g. Rice 5kg"
           />
         </Field>
+
+        {requireBranch && (
+          <Field label="Add product to branch">
+            <select
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              className="w-full px-3.5 py-2.5 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">Select a branch</option>
+              {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
+            </select>
+            {branches.length === 0 && <p className="mt-1 text-xs text-danger">Create a branch before adding inventory.</p>}
+          </Field>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-app-body mb-2">How was this priced?</label>

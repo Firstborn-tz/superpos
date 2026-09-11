@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ActivityLogEntry, Branch, InventoryItem, RefundRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
+import type { ActivityLogEntry, Branch, BranchSyncStatus, InventoryItem, RefundRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
 import { STORAGE_KEYS, readStorage, writeStorage } from '@/utils/storage'
 import { pullAllFromFirestore, pullPublicOperationalData } from '@/services/firebase/firestoreService'
 import { useAuthStore } from '@/store/authStore'
@@ -15,6 +15,7 @@ interface DataState {
   refunds: RefundRecord[]
   stockAdjustments: StockAdjustmentRecord[]
   activityLog: ActivityLogEntry[]
+  branchSyncs: BranchSyncStatus[]
   hydrated: boolean
   hydrateFromCache: () => void
   refreshFromServer: () => Promise<void>
@@ -38,6 +39,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   refunds: [],
   stockAdjustments: [],
   activityLog: [],
+  branchSyncs: [],
   hydrated: false,
 
   hydrateFromCache: () => {
@@ -64,8 +66,8 @@ export const useDataStore = create<DataState>((set, get) => ({
         return
       }
 
-      const { inventory, sales, branches, refunds, stockAdjustments, activityLog } = await pullAllFromFirestore()
-      set({ inventory, sales, branches, refunds, stockAdjustments, activityLog })
+      const { inventory, sales, branches, refunds, stockAdjustments, activityLog, branchSyncs } = await pullAllFromFirestore()
+      set({ inventory, sales, branches, refunds, stockAdjustments, activityLog, branchSyncs, hydrated: true })
       writeStorage(STORAGE_KEYS.INVENTORY, inventory)
       writeStorage(STORAGE_KEYS.SALES, sales)
       writeStorage(STORAGE_KEYS.BRANCHES, branches)

@@ -21,6 +21,7 @@ import {
   pushRefundRecord,
   pushSaleRecord,
   pushStockAdjustment,
+  pushBranchSyncStatus,
 } from '@/services/firebase/firestoreService'
 
 type Listener = (status: SyncStatus) => void
@@ -128,6 +129,17 @@ class SyncService {
     }
   }
 
+  private async markBranchSynced(op: PendingOperation): Promise<void> {
+    const payload = op.payload as { branchId?: string; branchName?: string }
+    if (!payload.branchId) return
+    await pushBranchSyncStatus({
+      branchId: payload.branchId,
+      branchName: payload.branchName,
+      lastSyncedAt: new Date().toISOString(),
+      lastOperation: op.type,
+    })
+  }
+
   async syncNow(): Promise<void> {
     if (this.status.isSyncing) return
     if (!navigator.onLine) return
@@ -143,6 +155,7 @@ class SyncService {
     for (const op of pending) {
       try {
         await this.processOperation(op)
+        await this.markBranchSynced(op)
       } catch (err) {
         lastError = err instanceof Error ? err.message : 'Sync failed'
         remaining.push({
