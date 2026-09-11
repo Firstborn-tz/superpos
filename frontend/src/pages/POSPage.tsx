@@ -53,6 +53,12 @@ export default function POSPage() {
     barcodeRef.current?.focus()
   }, [])
 
+  // Recover transactions created before the sync queue race was fixed, then
+  // keep the branch's locally recorded sales safely queued for Firestore.
+  useEffect(() => {
+    syncService.reconcileSales(sales, user?.branchId)
+  }, [sales, user?.branchId])
+
   const branchProducts = useMemo(
     () => inventory.filter((i) => !user?.branchId || i.branchId === user.branchId),
     [inventory, user],

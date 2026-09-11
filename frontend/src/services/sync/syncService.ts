@@ -26,6 +26,8 @@ import {
 
 type Listener = (status: SyncStatus) => void
 
+const SYNCED_SALE_IDS_KEY = 'superpos_synced_sale_ids'
+
 class SyncService {
   private listeners: Set<Listener> = new Set()
   private status: SyncStatus = {
@@ -96,6 +98,35 @@ class SyncService {
     return op
   }
 
+  /**
+   * Restores sales recorded by older app versions that were kept locally but
+   * lost from the pending queue during an overlapping stock sync. Firestore
+   * writes use the sale ID, so re-sending a sale is idempotent.
+   */
+  reconcileSales(sales: SaleRecord[], branchId?: string) {
+    if (!branchId) return
+    const syncedIds = new Set(readStorage<string[]>(SYNCED_SALE_IDS_KEY, []))
+    const queuedSaleIds = new Set(
+      this.getPendingOperations()
+        .filter((op) => op.type === 'SALE')
+        .map((op) => (op.payload as SaleRecord).id),
+    )
+
+    for (const sale of sales) {
+      if (sale.branchId !== branchId || syncedIds.has(sale.id) || queuedSaleIds.has(sale.id)) continue
+      queuedSaleIds.add(sale.id)
+      this.addPendingOperation('SALE', sale)
+    }
+  }
+
+  private rememberSyncedSale(saleId: string) {
+    const ids = new Set(readStorage<string[]>(SYNCED_SALE_IDS_KEY, []))
+    ids.add(saleId)
+    // Bound this device-side acknowledgement history while retaining enough
+    // IDs to recover normal offline work without re-uploading every sale.
+    writeStorage(SYNCED_SALE_IDS_KEY, [...ids].slice(-5000))
+  }
+
   async processOperation(op: PendingOperation): Promise<void> {
     switch (op.type) {
       case 'ADD_PRODUCT':
@@ -150,11 +181,13 @@ class SyncService {
     this.updateStatus({ isSyncing: true, lastError: null })
 
     const remaining: PendingOperation[] = []
+    const initialOperationIds = new Set(pending.map((op) => op.id))
     let lastError: string | null = null
 
     for (const op of pending) {
       try {
         await this.processOperation(op)
+        if (op.type === 'SALE') this.rememberSyncedSale((op.payload as SaleRecord).id)
         await this.markBranchSynced(op)
       } catch (err) {
         lastError = err instanceof Error ? err.message : 'Sync failed'
@@ -167,13 +200,22 @@ class SyncService {
       }
     }
 
-    this.setPendingOperations(remaining)
+    // Never overwrite operations added while the current batch was awaiting
+    // Firestore. Previously this discarded SALE operations that were queued
+    // immediately after stock updates, leaving branch-only sales forever
+    // absent from the admin database reports.
+    const addedWhileSyncing = this.getPendingOperations().filter((op) => !initialOperationIds.has(op.id))
+    this.setPendingOperations([...remaining, ...addedWhileSyncing])
     this.updateStatus({
       isSyncing: false,
       lastError,
       lastSyncedAt: new Date().toISOString(),
     })
     writeStorage('superpos_last_synced', new Date().toISOString())
+
+    // The callers that added these operations already tried to sync while
+    // this batch was active. Start a fresh batch now that it is safe.
+    if (addedWhileSyncing.length > 0) void this.syncNow()
   }
 
   getStatus(): SyncStatus {
