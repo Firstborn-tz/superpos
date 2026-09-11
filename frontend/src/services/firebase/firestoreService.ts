@@ -41,15 +41,22 @@ export async function pullAllFromFirestore(): Promise<{
   // Admin information must be authoritative. getDocs() is allowed to return
   // Firestore's persistent local cache; this method explicitly waits for the
   // server instead.
-  const [invSnap, salesSnap, branchSnap, refundSnap, adjSnap, logSnap, syncSnap] = await Promise.all([
+  const [invSnap, salesSnap, branchSnap, refundSnap, adjSnap, logSnap] = await Promise.all([
     getDocsFromServer(query(collection(db, COLLECTIONS.INVENTORY), orderBy('createdAt', 'desc'))),
     getDocsFromServer(query(collection(db, COLLECTIONS.SALES), orderBy('createdAt', 'desc'))),
     getDocsFromServer(query(collection(db, COLLECTIONS.BRANCHES), orderBy('createdAt', 'desc'))),
     getDocsFromServer(query(collection(db, COLLECTIONS.REFUNDS), orderBy('createdAt', 'desc'))),
     getDocsFromServer(query(collection(db, COLLECTIONS.STOCK_ADJUSTMENTS), orderBy('createdAt', 'desc'))),
     getDocsFromServer(query(collection(db, COLLECTIONS.ACTIVITY_LOG), orderBy('createdAt', 'desc'), limit(500))),
-    getDocsFromServer(collection(db, COLLECTIONS.BRANCH_SYNC)),
   ])
+
+  // Sync status is helpful context, but it must never prevent sales and
+  // other primary admin data from loading (for example while its new rule
+  // is still being deployed).
+  const syncSnap = await getDocsFromServer(collection(db, COLLECTIONS.BRANCH_SYNC)).catch((err) => {
+    console.warn('Could not load branch sync status', err)
+    return null
+  })
 
   return {
     inventory: invSnap.docs.map((d) => d.data() as InventoryItem),
@@ -58,7 +65,7 @@ export async function pullAllFromFirestore(): Promise<{
     refunds: refundSnap.docs.map((d) => d.data() as RefundRecord),
     stockAdjustments: adjSnap.docs.map((d) => d.data() as StockAdjustmentRecord),
     activityLog: logSnap.docs.map((d) => d.data() as ActivityLogEntry),
-    branchSyncs: syncSnap.docs.map((d) => d.data() as BranchSyncStatus),
+    branchSyncs: syncSnap?.docs.map((d) => d.data() as BranchSyncStatus) ?? [],
   }
 }
 

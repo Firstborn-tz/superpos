@@ -214,7 +214,7 @@ export interface SyncStatus {
   lastError: string | null
 }
 
-export type ReportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'
+export type ReportPeriod = 'all' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'
 
 export interface DateRange {
   start: string

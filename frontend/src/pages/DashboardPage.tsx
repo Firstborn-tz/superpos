@@ -26,6 +26,7 @@ import {
 } from '@/components/common/Icons'
 
 const PERIODS: { key: ReportPeriod; label: string }[] = [
+  { key: 'all', label: 'All Time' },
   { key: 'daily', label: 'Daily' },
   { key: 'weekly', label: 'Weekly' },
   { key: 'monthly', label: 'Monthly' },
@@ -36,12 +37,13 @@ const PERIODS: { key: ReportPeriod; label: string }[] = [
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { inventory, sales, branches, branchSyncs } = useDataStore()
-  const [period, setPeriod] = useState<ReportPeriod>('daily')
+  const [period, setPeriod] = useState<ReportPeriod>('all')
   const [branchFilter, setBranchFilter] = useState<string>('all')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
 
   const range = useMemo(() => {
+    if (period === 'all') return null
     if (period === 'custom') {
       if (!customStart || !customEnd) return null
       return { start: startOfDay(new Date(customStart)), end: endOfDay(new Date(customEnd)) }
@@ -83,17 +85,42 @@ export default function DashboardPage() {
   }, [filteredInventory])
 
   const branchPerformance: BranchPerformance[] = useMemo(() => {
-    return branches.map((b) => {
-      const branchSales = filteredSales.filter((s) => s.branchId === b.id)
-      return {
-        branchId: b.id,
-        branchName: b.name,
-        totalSales: branchSales.reduce((s, r) => s + r.totalAmount, 0),
-        totalProfit: branchSales.reduce((s, r) => s + r.totalProfit, 0),
-        transactions: branchSales.length,
-        itemsSold: branchSales.reduce((s, r) => s + r.items.reduce((a, i) => a + i.quantity, 0), 0),
+    const rows = new Map<string, BranchPerformance>()
+    const branchIdByName = new Map(branches.map((branch) => [branch.name.trim().toLowerCase(), branch.id]))
+
+    // Show every configured branch, including branches with no sales yet.
+    for (const branch of branches) {
+      rows.set(branch.id, {
+        branchId: branch.id,
+        branchName: branch.name,
+        totalSales: 0,
+        totalProfit: 0,
+        transactions: 0,
+        itemsSold: 0,
+      })
+    }
+
+    // Older records may have a branch name but no ID. Keep those sales
+    // visible by matching a known name first, then showing a legacy row.
+    for (const sale of filteredSales) {
+      const matchedId = sale.branchId ?? (sale.branchName ? branchIdByName.get(sale.branchName.trim().toLowerCase()) : undefined)
+      const rowId = matchedId ?? `legacy:${sale.branchName ?? 'unassigned'}`
+      const row = rows.get(rowId) ?? {
+        branchId: rowId,
+        branchName: sale.branchName || 'Unassigned branch',
+        totalSales: 0,
+        totalProfit: 0,
+        transactions: 0,
+        itemsSold: 0,
       }
-    })
+      row.totalSales += sale.totalAmount
+      row.totalProfit += sale.totalProfit
+      row.transactions += 1
+      row.itemsSold += sale.items.reduce((total, item) => total + item.quantity, 0)
+      rows.set(rowId, row)
+    }
+
+    return [...rows.values()]
   }, [branches, filteredSales])
 
   const recentSales = useMemo(() => filteredSales.slice(0, 10), [filteredSales])
@@ -206,8 +233,7 @@ export default function DashboardPage() {
         )}
 
         {/* Branch performance */}
-        {branches.length > 0 && (
-          <div className="bg-app-card rounded-card shadow-card overflow-hidden">
+        <div className="bg-app-card rounded-card shadow-card overflow-hidden">
             <div className="px-5 py-4 border-b border-app-border">
               <h2 className="font-bold text-app-heading">Branch Performance</h2>
             </div>
@@ -224,7 +250,11 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {branchPerformance
+                  {branchPerformance.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-8 text-center text-app-faint">No branch sales data available</td>
+                    </tr>
+                  ) : branchPerformance
                     .sort((a, b) => b.totalSales - a.totalSales)
                     .map((bp, idx) => (
                       <tr key={bp.branchId} className={idx % 2 === 0 ? 'bg-app-card' : 'bg-app-alt/50'}>
@@ -244,7 +274,6 @@ export default function DashboardPage() {
               </table>
             </div>
           </div>
-        )}
 
         {/* Recent sales */}
         <div className="bg-app-card rounded-card shadow-card overflow-hidden">
