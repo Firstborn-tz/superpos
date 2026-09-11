@@ -32,6 +32,21 @@ export default function OfflineIndicator() {
     )
   }
 
+  if (status.lastError) {
+    return (
+      <div className="flex items-center gap-2 bg-danger text-white text-sm font-medium px-4 py-2 w-full">
+        <WifiOffIcon width={16} height={16} />
+        <span className="flex-1">Sync failed. Sales are not yet recorded in the database.</span>
+        <button
+          onClick={() => void syncService.syncNow()}
+          className="rounded bg-white/20 hover:bg-white/30 px-2 py-0.5 text-xs font-semibold"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
+
   if (status.isSyncing || status.pendingCount > 0) {
     return (
       <div className="flex items-center gap-2 bg-warning text-white text-sm font-medium px-4 py-2 w-full">

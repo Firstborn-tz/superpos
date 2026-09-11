@@ -188,7 +188,14 @@ class SyncService {
       try {
         await this.processOperation(op)
         if (op.type === 'SALE') this.rememberSyncedSale((op.payload as SaleRecord).id)
-        await this.markBranchSynced(op)
+        // Branch sync status is informative only. A missing/deferred rule for
+        // that status document must never keep a successfully written sale in
+        // the queue or make the cashier believe it was not recorded.
+        try {
+          await this.markBranchSynced(op)
+        } catch (err) {
+          console.warn('Could not update branch sync status', err)
+        }
       } catch (err) {
         lastError = err instanceof Error ? err.message : 'Sync failed'
         remaining.push({
