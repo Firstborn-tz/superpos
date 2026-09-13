@@ -1,8 +1,5 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { PublicBranch } from '@/types'
-import { pullPublicBranches } from '@/services/firebase/firestoreService'
-import { BUSINESS_INFO, getDirectionsUrl, getGoogleReviewUrl, getWhatsAppUrl } from '@/config/businessInfo'
+import { BUSINESS_INFO, getGoogleReviewUrl, getWhatsAppUrl } from '@/config/businessInfo'
 import Reveal from '@/components/landing/Reveal'
 import {
   BoxIcon,
@@ -11,7 +8,6 @@ import {
   ShieldIcon,
   MapPinIcon,
   ClockIcon,
-  PhoneIcon,
   StarIcon,
   DollarIcon,
   CheckIcon,
@@ -22,33 +18,16 @@ import {
 } from '@/components/common/Icons'
 
 const SERVICES = [
-  { icon: LeafIcon, title: 'Fresh Produce', desc: 'Daily-sourced fruits and vegetables, always fresh on our shelves.' },
-  { icon: CartIcon, title: 'Everything in One Cart', desc: 'Everything from cleaning supplies to kitchenware, all in one place.' },
-  { icon: DollarIcon, title: 'Fair, Honest Prices', desc: 'Transparent pricing with regular deals across every department.' },
-  { icon: TruckIcon, title: 'Well-Stocked Shelves', desc: 'Real-time stock tracking across branches means fewer "out of stock" surprises.' },
-  { icon: ShieldIcon, title: 'Quality You Can Trust', desc: 'Every product checked for freshness and quality before it reaches the shelf.' },
-  { icon: RefundIcon, title: 'Easy Returns', desc: "Not quite right? We'll sort it out quickly, no hassle." },
+  { icon: LeafIcon, title: 'Fresh produce', desc: 'Daily-sourced fruits and vegetables, always fresh on our shelves.' },
+  { icon: CartIcon, title: 'Everything in one cart', desc: 'Everything from cleaning supplies to kitchenware, all in one place.' },
+  { icon: DollarIcon, title: 'Fair, honest prices', desc: 'Transparent pricing with regular deals across every department.' },
+  { icon: TruckIcon, title: 'Well-stocked shelves', desc: 'Real-time stock tracking across branches means fewer "out of stock" surprises.' },
+  { icon: ShieldIcon, title: 'Quality you can trust', desc: 'Every product checked for freshness and quality before it reaches the shelf.' },
+  { icon: RefundIcon, title: 'Easy returns', desc: "Not quite right? We'll sort it out quickly, no hassle." },
 ]
 
 export default function LandingPage() {
   const navigate = useNavigate()
-  const [branches, setBranches] = useState<PublicBranch[]>([])
-  const [loadingBranches, setLoadingBranches] = useState(true)
-
-  useEffect(() => {
-    let cancelled = false
-    pullPublicBranches()
-      .then((b) => {
-        if (!cancelled) setBranches(b)
-      })
-      .catch((err) => console.error('Failed to load branches for landing page', err))
-      .finally(() => {
-        if (!cancelled) setLoadingBranches(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   return (
     <div className="min-h-screen bg-app-card overflow-x-hidden">
@@ -114,8 +93,8 @@ export default function LandingPage() {
               {BUSINESS_INFO.tagline} Everyday shopping made simple, fresh and friendly.
             </p>
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 animate-[fadeInUp_0.8s_ease_0.3s_backwards]">
-              <a href="#branches" className="inline-flex items-center gap-2 bg-white text-primary-dark font-bold px-5 py-3.5 rounded-xl hover:bg-lime-50 transition-colors shadow-lg shadow-black/10">
-                <MapPinIcon width={18} height={18} /> Find a branch <ChevronRightIcon width={16} height={16} />
+              <a href={BUSINESS_INFO.mapUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-white text-primary-dark font-bold px-5 py-3.5 rounded-xl hover:bg-lime-50 transition-colors shadow-lg shadow-black/10">
+                <MapPinIcon width={18} height={18} /> Find the nearest branch <ChevronRightIcon width={16} height={16} />
               </a>
               <a href={getWhatsAppUrl(`Hello ${BUSINESS_INFO.name}, I have a question.`)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/30 font-bold px-5 py-3.5 rounded-xl transition-colors">
                 <WhatsAppIcon width={19} height={19} /> WhatsApp us
@@ -176,54 +155,29 @@ export default function LandingPage() {
       </section>
 
       {/* ---------------------------------------------------------- */}
-      {/* Branch locations - pulled live from Firestore */}
+      {/* Store locator */}
       {/* ---------------------------------------------------------- */}
       <section id="branches" className="bg-app-alt py-20">
         <div className="max-w-6xl mx-auto px-5">
           <Reveal className="text-center mb-12">
           <span className="text-sm uppercase tracking-[0.16em] font-bold text-primary">Come say hello</span>
-          <h2 className="text-3xl font-extrabold text-app-heading mt-3 mb-3">Find your nearest Sengasu.</h2>
+          <h2 className="text-3xl font-extrabold text-app-heading mt-3 mb-3">Find your nearest Sengasu shopping center.</h2>
             <p className="text-app-muted flex items-center justify-center gap-2">
               <ClockIcon width={16} height={16} />
               {BUSINESS_INFO.openingHours}
             </p>
           </Reveal>
 
-          {loadingBranches ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="bg-app-card rounded-card p-6 h-40 animate-pulse" />
-              ))}
-            </div>
-          ) : branches.length === 0 ? (
-            <p className="text-center text-app-faint">Branch details will appear here soon.</p>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {branches.map((b, i) => (
-                <Reveal key={b.id} delay={i * 80}>
-                  <div className="bg-app-card border border-app-border rounded-card p-6 h-full">
-                    <div className="w-11 h-11 rounded-lg bg-primary-50 text-primary flex items-center justify-center mb-3">
-                      <MapPinIcon width={20} height={20} />
-                    </div>
-                    <h3 className="font-bold text-app-heading mb-1">{b.name}</h3>
-                    <p className="text-sm text-app-muted mb-1">{b.address}</p>
-                    <p className="text-sm text-app-muted mb-4 flex items-center gap-1.5">
-                      <PhoneIcon width={13} height={13} />
-                      {b.phone}
-                    </p>
-                    <a
-                      href={getDirectionsUrl(b.address)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm font-semibold text-primary hover:underline"
-                    >
-                      Get directions &rarr;
-                    </a>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          )}
+          <Reveal className="flex justify-center">
+            <a
+              href={BUSINESS_INFO.mapUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3.5 font-bold text-white shadow-lg shadow-primary/20 transition-colors hover:bg-primary-dark"
+            >
+              <MapPinIcon width={18} height={18} /> Find the nearest branch <ChevronRightIcon width={16} height={16} />
+            </a>
+          </Reveal>
         </div>
       </section>
 
