@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import Modal from '@/components/common/Modal'
@@ -20,7 +20,7 @@ import {
   isLowStock,
   isOutOfStock,
 } from '@/utils/helpers'
-import { PlusIcon, SearchIcon, PrintIcon, BoxIcon, WarningIcon, ReportsIcon, TrashIcon } from '@/components/common/Icons'
+import { PlusIcon, SearchIcon, PrintIcon, BoxIcon, WarningIcon, ReportsIcon, TrashIcon, EditIcon } from '@/components/common/Icons'
 import { addBatch, adjustBatchQuantity, ensureBatches, getBatchStatusCounts } from '@/utils/batches'
 import type { StockBatch } from '@/types'
 
@@ -54,6 +54,7 @@ export default function InventoryPage() {
   const [stockTarget, setStockTarget] = useState<InventoryItem | null>(null)
   const [adjustTarget, setAdjustTarget] = useState<InventoryItem | null>(null)
   const [detailTarget, setDetailTarget] = useState<InventoryItem | null>(null)
+  const [priceTarget, setPriceTarget] = useState<InventoryItem | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null)
 
   const scoped = useMemo(
@@ -180,6 +181,20 @@ export default function InventoryPage() {
     setDeleteTarget(null)
   }
 
+  function handleUpdatePrices(item: InventoryItem, buyingPrice: number, sellingPrice: number) {
+    if (!isAdmin) return
+    const updated = { ...item, buyingPrice, sellingPrice, updatedAt: new Date().toISOString() }
+    upsertInventoryItem(updated)
+    syncService.addPendingOperation('UPDATE_PRODUCT', updated)
+    logActivity(
+      'UPDATE_PRODUCT',
+      `Updated prices for "${item.productName}" (buying: ${formatCurrency(buyingPrice)}, selling: ${formatCurrency(sellingPrice)})`,
+      user,
+    )
+    toast.success('Product prices updated')
+    setPriceTarget(null)
+  }
+
   return (
     <DashboardLayout title="Inventory">
       <div className="space-y-5">
@@ -237,6 +252,7 @@ export default function InventoryPage() {
                 onAddStock={setStockTarget}
                 onAdjust={setAdjustTarget}
                 onPrint={handlePrintBarcode}
+                onEditPrices={setPriceTarget}
                 onDelete={setDeleteTarget}
               />
             ) : (
@@ -249,6 +265,7 @@ export default function InventoryPage() {
       <AddProductModal open={showAdd} onClose={() => setShowAdd(false)} onSubmit={handleAddProduct} branches={branches} requireBranch={isAdmin} />
       <AddStockModal item={stockTarget} onClose={() => setStockTarget(null)} onSubmit={handleAddStock} />
       <AdjustStockModal item={adjustTarget} onClose={() => setAdjustTarget(null)} onSubmit={handleAdjustStock} />
+      <EditProductPricesModal item={priceTarget} onClose={() => setPriceTarget(null)} onSubmit={handleUpdatePrices} />
       <DeleteProductModal item={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDeleteProduct} />
       <ProductDetailModal
         item={detailTarget}
@@ -277,12 +294,14 @@ function AdminInventoryTable({
   onAddStock,
   onAdjust,
   onPrint,
+  onEditPrices,
   onDelete,
 }: {
   items: InventoryItem[]
   onAddStock: (item: InventoryItem) => void
   onAdjust: (item: InventoryItem) => void
   onPrint: (item: InventoryItem) => void
+  onEditPrices: (item: InventoryItem) => void
   onDelete: (item: InventoryItem) => void
 }) {
   return (
@@ -323,7 +342,7 @@ function AdminInventoryTable({
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${status.cls}`}>{status.label}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex justify-end items-center gap-2 whitespace-nowrap">
+                  <div className="grid grid-cols-2 gap-1.5 sm:flex sm:justify-end sm:items-center sm:gap-2">
                     <button onClick={() => onAddStock(item)} className="text-xs font-semibold text-secondary hover:underline">
                       Add Stock
                     </button>
@@ -336,6 +355,14 @@ function AdminInventoryTable({
                     >
                       <PrintIcon width={12} height={12} />
                       Print
+                    </button>
+                    <button
+                      onClick={() => onEditPrices(item)}
+                      className="inline-flex items-center justify-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                      aria-label={`Edit prices for ${item.productName}`}
+                    >
+                      <EditIcon width={13} height={13} />
+                      Edit prices
                     </button>
                     <button
                       onClick={() => onDelete(item)}
@@ -396,6 +423,102 @@ function DeleteProductModal({
           </button>
         </div>
       </div>
+    </Modal>
+  )
+}
+
+function EditProductPricesModal({
+  item,
+  onClose,
+  onSubmit,
+}: {
+  item: InventoryItem | null
+  onClose: () => void
+  onSubmit: (item: InventoryItem, buyingPrice: number, sellingPrice: number) => void
+}) {
+  const [buyingPrice, setBuyingPrice] = useState('')
+  const [sellingPrice, setSellingPrice] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!item) return
+    setBuyingPrice(String(item.buyingPrice))
+    setSellingPrice(String(item.sellingPrice))
+    setError('')
+  }, [item])
+
+  if (!item) return null
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    const buying = parseFloat(buyingPrice)
+    const selling = parseFloat(sellingPrice)
+    if (isNaN(buying) || buying < 0 || isNaN(selling) || selling < 0) {
+      setError('Enter valid prices of zero or more.')
+      return
+    }
+    if (selling < buying) {
+      setError('Selling price cannot be lower than the buying price.')
+      return
+    }
+    onSubmit(item, buying, selling)
+  }
+
+  return (
+    <Modal open={!!item} onClose={onClose} title="Edit Product Prices">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="rounded-lg bg-app-alt px-3.5 py-3">
+          <div className="font-semibold text-app-heading">{item.productName}</div>
+          <div className="mt-0.5 text-xs text-app-muted">Update the buying and selling price per item.</div>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-danger">
+            <WarningIcon width={16} height={16} />
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Buying Price (per item)">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={buyingPrice}
+              onChange={(e) => setBuyingPrice(e.target.value)}
+              autoFocus
+              className="w-full px-3.5 py-2.5 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </Field>
+          <Field label="Selling Price (per item)">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={sellingPrice}
+              onChange={(e) => setSellingPrice(e.target.value)}
+              className="w-full px-3.5 py-2.5 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </Field>
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm font-semibold bg-app-hover text-app-body hover:bg-app-hover-strong"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm font-semibold bg-primary text-white hover:bg-primary-dark"
+          >
+            Save Prices
+          </button>
+        </div>
+      </form>
     </Modal>
   )
 }

@@ -161,6 +161,7 @@ export type ActivityAction =
   | 'STOCK_ADJUSTMENT'
   | 'ADD_PRODUCT'
   | 'ADD_STOCK'
+  | 'UPDATE_PRODUCT'
   | 'ADD_BRANCH'
   | 'DELETE_BRANCH'
   | 'DELETE_PRODUCT'
@@ -188,6 +189,7 @@ export interface ActivityLogEntry {
 export type OperationType =
   | 'ADD_PRODUCT'
   | 'ADD_STOCK'
+  | 'UPDATE_PRODUCT'
   | 'SALE'
   | 'ADD_BRANCH'
   | 'DELETE_BRANCH'

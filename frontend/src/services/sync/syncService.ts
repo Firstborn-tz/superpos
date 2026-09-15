@@ -132,6 +132,7 @@ class SyncService {
     switch (op.type) {
       case 'ADD_PRODUCT':
       case 'ADD_STOCK':
+      case 'UPDATE_PRODUCT':
         await pushInventoryItem(op.payload as InventoryItem)
         return
       case 'DELETE_PRODUCT':
