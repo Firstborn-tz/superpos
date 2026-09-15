@@ -87,6 +87,10 @@ export async function pushInventoryItem(item: InventoryItem): Promise<void> {
   await setDoc(doc(db, COLLECTIONS.INVENTORY, item.id), item, { merge: true })
 }
 
+export async function deleteInventoryItemRemote(itemId: string): Promise<void> {
+  await deleteDoc(doc(db, COLLECTIONS.INVENTORY, itemId))
+}
+
 export async function pushBranchSyncStatus(status: BranchSyncStatus): Promise<void> {
   await setDoc(doc(db, COLLECTIONS.BRANCH_SYNC, status.branchId), status, { merge: true })
 }

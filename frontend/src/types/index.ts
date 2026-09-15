@@ -163,6 +163,7 @@ export type ActivityAction =
   | 'ADD_STOCK'
   | 'ADD_BRANCH'
   | 'DELETE_BRANCH'
+  | 'DELETE_PRODUCT'
   | 'PASSWORD_CHANGE'
 
 export interface ChatMessage {
@@ -190,6 +191,7 @@ export type OperationType =
   | 'SALE'
   | 'ADD_BRANCH'
   | 'DELETE_BRANCH'
+  | 'DELETE_PRODUCT'
   | 'UPDATE_BRANCH_PASSWORD'
   | 'REFUND'
   | 'STOCK_ADJUSTMENT'

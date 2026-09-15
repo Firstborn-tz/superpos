@@ -14,6 +14,7 @@ import { STORAGE_KEYS, readStorage, writeStorage } from '@/utils/storage'
 import { generateId } from '@/utils/helpers'
 import {
   deleteBranchRemote,
+  deleteInventoryItemRemote,
   pushActivityLogEntry,
   pushBranch,
   pushChatMessage,
@@ -132,6 +133,9 @@ class SyncService {
       case 'ADD_PRODUCT':
       case 'ADD_STOCK':
         await pushInventoryItem(op.payload as InventoryItem)
+        return
+      case 'DELETE_PRODUCT':
+        await deleteInventoryItemRemote((op.payload as { id: string }).id)
         return
       case 'SALE':
         await pushSaleRecord(op.payload as SaleRecord)

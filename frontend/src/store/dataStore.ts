@@ -23,6 +23,7 @@ interface DataState {
   setSales: (items: SaleRecord[]) => void
   setBranches: (items: Branch[]) => void
   upsertInventoryItem: (item: InventoryItem) => void
+  removeInventoryItem: (itemId: string) => void
   addSale: (sale: SaleRecord) => void
   updateSale: (sale: SaleRecord) => void
   upsertBranch: (branch: Branch) => void
@@ -97,6 +98,12 @@ export const useDataStore = create<DataState>((set, get) => ({
     const items = get().inventory
     const idx = items.findIndex((i) => i.id === item.id)
     const next = idx >= 0 ? items.map((i) => (i.id === item.id ? item : i)) : [...items, item]
+    set({ inventory: next })
+    writeStorage(STORAGE_KEYS.INVENTORY, next)
+  },
+
+  removeInventoryItem: (itemId) => {
+    const next = get().inventory.filter((item) => item.id !== itemId)
     set({ inventory: next })
     writeStorage(STORAGE_KEYS.INVENTORY, next)
   },

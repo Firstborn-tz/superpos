@@ -20,7 +20,7 @@ import {
   isLowStock,
   isOutOfStock,
 } from '@/utils/helpers'
-import { PlusIcon, SearchIcon, PrintIcon, BoxIcon, WarningIcon, ReportsIcon } from '@/components/common/Icons'
+import { PlusIcon, SearchIcon, PrintIcon, BoxIcon, WarningIcon, ReportsIcon, TrashIcon } from '@/components/common/Icons'
 import { addBatch, adjustBatchQuantity, ensureBatches, getBatchStatusCounts } from '@/utils/batches'
 import type { StockBatch } from '@/types'
 
@@ -44,7 +44,7 @@ function statusFor(item: InventoryItem) {
 
 export default function InventoryPage() {
   const user = useAuthStore((s) => s.user)
-  const { inventory, sales, branches, upsertInventoryItem, addStockAdjustment } = useDataStore()
+  const { inventory, sales, branches, upsertInventoryItem, removeInventoryItem, addStockAdjustment } = useDataStore()
   const navigate = useNavigate()
   const isAdmin = user?.role === 'admin'
 
@@ -54,6 +54,7 @@ export default function InventoryPage() {
   const [stockTarget, setStockTarget] = useState<InventoryItem | null>(null)
   const [adjustTarget, setAdjustTarget] = useState<InventoryItem | null>(null)
   const [detailTarget, setDetailTarget] = useState<InventoryItem | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null)
 
   const scoped = useMemo(
     () => inventory.filter((i) => isAdmin || i.branchId === user?.branchId),
@@ -170,6 +171,15 @@ export default function InventoryPage() {
     navigate('/barcode', { state: { barcode: item.barcode, productName: item.productName, price: item.sellingPrice } })
   }
 
+  function handleDeleteProduct(item: InventoryItem) {
+    if (!isAdmin) return
+    removeInventoryItem(item.id)
+    syncService.addPendingOperation('DELETE_PRODUCT', { id: item.id })
+    logActivity('DELETE_PRODUCT', `Deleted product "${item.productName}"`, user)
+    toast.success('Product deleted')
+    setDeleteTarget(null)
+  }
+
   return (
     <DashboardLayout title="Inventory">
       <div className="space-y-5">
@@ -227,6 +237,7 @@ export default function InventoryPage() {
                 onAddStock={setStockTarget}
                 onAdjust={setAdjustTarget}
                 onPrint={handlePrintBarcode}
+                onDelete={setDeleteTarget}
               />
             ) : (
               <CashierInventoryTable items={filtered} onViewDetails={setDetailTarget} />
@@ -238,6 +249,7 @@ export default function InventoryPage() {
       <AddProductModal open={showAdd} onClose={() => setShowAdd(false)} onSubmit={handleAddProduct} branches={branches} requireBranch={isAdmin} />
       <AddStockModal item={stockTarget} onClose={() => setStockTarget(null)} onSubmit={handleAddStock} />
       <AdjustStockModal item={adjustTarget} onClose={() => setAdjustTarget(null)} onSubmit={handleAdjustStock} />
+      <DeleteProductModal item={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDeleteProduct} />
       <ProductDetailModal
         item={detailTarget}
         sales={sales}
@@ -265,11 +277,13 @@ function AdminInventoryTable({
   onAddStock,
   onAdjust,
   onPrint,
+  onDelete,
 }: {
   items: InventoryItem[]
   onAddStock: (item: InventoryItem) => void
   onAdjust: (item: InventoryItem) => void
   onPrint: (item: InventoryItem) => void
+  onDelete: (item: InventoryItem) => void
 }) {
   return (
     <table className="w-full text-sm">
@@ -323,6 +337,13 @@ function AdminInventoryTable({
                       <PrintIcon width={12} height={12} />
                       Print
                     </button>
+                    <button
+                      onClick={() => onDelete(item)}
+                      className="text-xs font-semibold text-danger hover:underline flex items-center gap-1"
+                    >
+                      <TrashIcon width={12} height={12} />
+                      Delete
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -331,6 +352,49 @@ function AdminInventoryTable({
         )}
       </tbody>
     </table>
+  )
+}
+
+function DeleteProductModal({
+  item,
+  onClose,
+  onConfirm,
+}: {
+  item: InventoryItem | null
+  onClose: () => void
+  onConfirm: (item: InventoryItem) => void
+}) {
+  if (!item) return null
+
+  return (
+    <Modal open={!!item} onClose={onClose} title="Delete Product">
+      <div className="space-y-4">
+        <div className="flex items-start gap-2 bg-red-50 text-danger text-sm rounded-lg px-3.5 py-2.5">
+          <WarningIcon width={16} height={16} className="mt-0.5 shrink-0" />
+          <span>
+            Delete <span className="font-bold">{item.productName}</span> from inventory? This product will no longer
+            be available for sale. Existing sales records will be kept.
+          </span>
+        </div>
+        <p className="text-sm text-app-muted">This action cannot be undone.</p>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-app-hover text-app-body hover:bg-app-hover-strong"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(item)}
+            className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-danger text-white hover:bg-red-600"
+          >
+            Delete Product
+          </button>
+        </div>
+      </div>
+    </Modal>
   )
 }
 
