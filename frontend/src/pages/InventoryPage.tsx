@@ -289,14 +289,14 @@ function AdminInventoryTable({
     <table className="w-full text-sm">
       <thead className="bg-app-alt text-app-muted">
         <tr>
-          <th className="text-left px-4 py-3 font-semibold">Barcode</th>
+          <th className="hidden xl:table-cell text-left px-4 py-3 font-semibold">Barcode</th>
           <th className="text-left px-4 py-3 font-semibold">Product</th>
-          <th className="text-left px-4 py-3 font-semibold">Branch</th>
-          <th className="text-right px-4 py-3 font-semibold">Buying Price</th>
+          <th className="hidden xl:table-cell text-left px-4 py-3 font-semibold">Branch</th>
+          <th className="hidden xl:table-cell text-right px-4 py-3 font-semibold">Buying Price</th>
           <th className="text-right px-4 py-3 font-semibold">Selling Price</th>
           <th className="text-right px-4 py-3 font-semibold">Stock</th>
-          <th className="text-left px-4 py-3 font-semibold">Expiry</th>
-          <th className="text-left px-4 py-3 font-semibold">Status</th>
+          <th className="hidden lg:table-cell text-left px-4 py-3 font-semibold">Expiry</th>
+          <th className="hidden lg:table-cell text-left px-4 py-3 font-semibold">Status</th>
           <th className="text-right px-4 py-3 font-semibold">Actions</th>
         </tr>
       </thead>
@@ -312,18 +312,18 @@ function AdminInventoryTable({
             const status = statusFor(item)
             return (
               <tr key={item.id} className={idx % 2 === 0 ? 'bg-app-card' : 'bg-app-alt/50'}>
-                <td className="px-4 py-3 font-mono text-xs text-app-muted">{item.barcode}</td>
+                <td className="hidden xl:table-cell px-4 py-3 font-mono text-xs text-app-muted">{item.barcode}</td>
                 <td className="px-4 py-3 font-medium text-app-heading">{item.productName}</td>
-                <td className="px-4 py-3 text-app-muted">{item.branchName ?? 'Unassigned'}</td>
-                <td className="px-4 py-3 text-right">{formatCurrency(item.buyingPrice)}</td>
+                <td className="hidden xl:table-cell px-4 py-3 text-app-muted">{item.branchName ?? 'Unassigned'}</td>
+                <td className="hidden xl:table-cell px-4 py-3 text-right">{formatCurrency(item.buyingPrice)}</td>
                 <td className="px-4 py-3 text-right">{formatCurrency(item.sellingPrice)}</td>
                 <td className="px-4 py-3 text-right">{item.currentStock}</td>
-                <td className="px-4 py-3 text-app-muted">{formatDate(item.expiryDate)}</td>
-                <td className="px-4 py-3">
+                <td className="hidden lg:table-cell px-4 py-3 text-app-muted">{formatDate(item.expiryDate)}</td>
+                <td className="hidden lg:table-cell px-4 py-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${status.cls}`}>{status.label}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex justify-end gap-2 flex-wrap">
+                  <div className="flex justify-end items-center gap-2 whitespace-nowrap">
                     <button onClick={() => onAddStock(item)} className="text-xs font-semibold text-secondary hover:underline">
                       Add Stock
                     </button>
@@ -339,10 +339,12 @@ function AdminInventoryTable({
                     </button>
                     <button
                       onClick={() => onDelete(item)}
-                      className="text-xs font-semibold text-danger hover:underline flex items-center gap-1"
+                      className="inline-flex items-center gap-1 rounded-md bg-danger px-2.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2"
+                      aria-label={`Delete ${item.productName}`}
+                      title={`Delete ${item.productName}`}
                     >
-                      <TrashIcon width={12} height={12} />
-                      Delete
+                      <TrashIcon width={13} height={13} />
+                      Delete product
                     </button>
                   </div>
                 </td>
