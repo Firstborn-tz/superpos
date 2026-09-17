@@ -123,29 +123,41 @@ export default function DashboardPage() {
     return [...rows.values()]
   }, [branches, filteredSales])
 
-  const recentSales = useMemo(() => filteredSales.slice(0, 10), [filteredSales])
+  // Storage and sync order are not guaranteed to be chronological, so always
+  // derive the dashboard feed from the recorded sale time.
+  const recentSales = useMemo(
+    () => [...filteredSales].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 10),
+    [filteredSales],
+  )
+
+  const rankedBranches = useMemo(
+    () => [...branchPerformance].sort((a, b) => b.totalSales - a.totalSales),
+    [branchPerformance],
+  )
 
   return (
     <DashboardLayout title="Dashboard">
       <div className="space-y-6">
         {/* Filters */}
         <div className="bg-app-card rounded-card shadow-card p-4 flex flex-col gap-4">
-          <div className="flex flex-wrap gap-2">
-            {PERIODS.map((p) => (
-              <button
-                key={p.key}
-                onClick={() => setPeriod(p.key)}
-                className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  period === p.key ? 'bg-primary text-white' : 'bg-app-hover text-app-body hover:bg-app-hover-strong'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0">
+              {PERIODS.map((p) => (
+                <button
+                  key={p.key}
+                  onClick={() => setPeriod(p.key)}
+                  className={`shrink-0 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    period === p.key ? 'bg-primary text-white' : 'bg-app-hover text-app-body hover:bg-app-hover-strong'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
             <select
               value={branchFilter}
               onChange={(e) => setBranchFilter(e.target.value)}
-              className="ml-auto px-3 py-1.5 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full sm:ml-auto sm:w-auto px-3 py-2 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="all">All Branches</option>
               {branches.map((b) => (
@@ -175,7 +187,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Sales summary */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Total Sales" value={formatCurrency(totals.totalSales)} icon={<DollarIcon />} accent="primary" />
           <StatCard label="Total Profit" value={formatCurrency(totals.totalProfit)} icon={<DollarIcon />} accent="secondary" />
           <StatCard label="Items Sold" value={totals.itemsSold.toLocaleString()} icon={<BoxIcon />} accent="primary" />
@@ -185,7 +197,7 @@ export default function DashboardPage() {
         {/* Inventory summary */}
         <div>
           <h2 className="text-sm font-bold text-app-muted uppercase tracking-wide mb-3">Inventory summary</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Total Products" value={inventorySummary.totalProducts.toLocaleString()} icon={<InventoryIcon />} />
             <StatCard label="Inventory Value" value={formatCurrency(inventorySummary.inventoryValue)} icon={<BoxIcon />} />
             <StatCard
@@ -234,10 +246,10 @@ export default function DashboardPage() {
 
         {/* Branch performance */}
         <div className="bg-app-card rounded-card shadow-card overflow-hidden">
-            <div className="px-5 py-4 border-b border-app-border">
+            <div className="px-4 py-4 sm:px-5 border-b border-app-border">
               <h2 className="font-bold text-app-heading">Branch Performance</h2>
             </div>
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-app-alt text-app-muted">
                   <tr>
@@ -250,13 +262,11 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {branchPerformance.length === 0 ? (
+                  {rankedBranches.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-5 py-8 text-center text-app-faint">No branch sales data available</td>
                     </tr>
-                  ) : branchPerformance
-                    .sort((a, b) => b.totalSales - a.totalSales)
-                    .map((bp, idx) => (
+                  ) : rankedBranches.map((bp, idx) => (
                       <tr key={bp.branchId} className={idx % 2 === 0 ? 'bg-app-card' : 'bg-app-alt/50'}>
                         <td className="px-5 py-3 font-medium text-app-heading">{bp.branchName}</td>
                         <td className="px-5 py-3 text-right">{formatCurrency(bp.totalSales)}</td>
@@ -273,14 +283,40 @@ export default function DashboardPage() {
                 </tbody>
               </table>
             </div>
+            <div className="divide-y divide-app-border md:hidden">
+              {rankedBranches.length === 0 ? (
+                <p className="px-4 py-8 text-center text-sm text-app-faint">No branch sales data available</p>
+              ) : rankedBranches.map((branch) => {
+                const syncedAt = branchSyncs.find((sync) => sync.branchId === branch.branchId)?.lastSyncedAt
+                return (
+                  <div key={branch.branchId} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-app-heading truncate">{branch.branchName}</div>
+                        <div className="mt-1 text-xs text-app-muted">{branch.transactions} transactions &middot; {branch.itemsSold} items sold</div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="font-bold text-app-heading">{formatCurrency(branch.totalSales)}</div>
+                        <div className="mt-0.5 text-xs font-medium text-primary">Profit {formatCurrency(branch.totalProfit)}</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-xs text-app-faint">Last sync: {syncedAt ? formatDateTime(syncedAt) : 'No synced activity yet'}</div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
         {/* Recent sales */}
         <div className="bg-app-card rounded-card shadow-card overflow-hidden">
-          <div className="px-5 py-4 border-b border-app-border">
-            <h2 className="font-bold text-app-heading">Recent Sales</h2>
+          <div className="px-4 py-4 sm:px-5 border-b border-app-border flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-bold text-app-heading">Recent Sales</h2>
+              <p className="text-xs text-app-muted mt-0.5">Latest transactions, ordered by time recorded</p>
+            </div>
+            <span className="rounded-full bg-app-alt px-2.5 py-1 text-xs font-semibold text-app-muted">{recentSales.length}</span>
           </div>
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-app-alt text-app-muted">
                 <tr>
@@ -290,6 +326,7 @@ export default function DashboardPage() {
                   <th className="text-right px-5 py-3 font-semibold">Total</th>
                   <th className="text-right px-5 py-3 font-semibold">Profit</th>
                   <th className="text-left px-5 py-3 font-semibold">Payment</th>
+                  <th className="text-left px-5 py-3 font-semibold">Status</th>
                   <th className="text-left px-5 py-3 font-semibold">Cashier</th>
                   <th className="text-left px-5 py-3 font-semibold">Date</th>
                 </tr>
@@ -297,7 +334,7 @@ export default function DashboardPage() {
               <tbody>
                 {recentSales.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center px-5 py-8 text-app-faint">
+                    <td colSpan={9} className="text-center px-5 py-8 text-app-faint">
                       No sales recorded for this period
                     </td>
                   </tr>
@@ -310,6 +347,13 @@ export default function DashboardPage() {
                       <td className="px-5 py-3 text-right font-medium">{formatCurrency(s.totalAmount)}</td>
                       <td className="px-5 py-3 text-right text-primary">{formatCurrency(s.totalProfit)}</td>
                       <td className="px-5 py-3 capitalize">{s.paymentMethod.replace('_', ' ')}</td>
+                      <td className="px-5 py-3">
+                        {s.refunded ? (
+                          <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-danger">Refunded</span>
+                        ) : (
+                          <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-primary">Completed</span>
+                        )}
+                      </td>
                       <td className="px-5 py-3">{s.cashierName}</td>
                       <td className="px-5 py-3 text-app-muted">{formatDateTime(s.createdAt)}</td>
                     </tr>
@@ -317,6 +361,31 @@ export default function DashboardPage() {
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="divide-y divide-app-border md:hidden">
+            {recentSales.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-app-faint">No sales recorded for this period</p>
+            ) : (
+              recentSales.map((sale) => (
+                <div key={sale.id} className="p-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-mono text-xs text-app-muted truncate">{sale.transactionId}</div>
+                      <div className="mt-1 text-sm font-semibold text-app-heading truncate">{sale.branchName ?? 'Unassigned branch'}</div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="font-bold text-app-heading">{formatCurrency(sale.totalAmount)}</div>
+                      <div className="mt-0.5 text-xs text-primary">Profit {formatCurrency(sale.totalProfit)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-xs text-app-muted">
+                    <span className="capitalize">{sale.paymentMethod.replace('_', ' ')} &middot; {sale.items.reduce((total, item) => total + item.quantity, 0)} items</span>
+                    <span className="shrink-0">{formatDateTime(sale.createdAt)}</span>
+                  </div>
+                  {sale.refunded && <span className="inline-flex rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-danger">Refunded</span>}
+                </div>
+              ))
+            )}
           </div>
         </div>
 
