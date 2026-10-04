@@ -219,3 +219,46 @@ button {
     object-fit: contain;
   }
 }
+/* Shared product loader */
+.loader {
+  --loader-height: 60px;
+  --loader-line: 3px;
+  display: inline-block;
+  position: relative;
+  flex: none;
+  width: calc(var(--loader-height) * 2);
+  height: var(--loader-height);
+  aspect-ratio: 2;
+  border-bottom: var(--loader-line) solid #0000;
+  background: linear-gradient(90deg, #524656 50%, #0000 0) -25% 100% / 50% var(--loader-line) repeat-x border-box;
+  animation: l3-0 0.75s linear infinite;
+}
+
+.loader::before {
+  content: '';
+  position: absolute;
+  inset: auto 42.5% 0;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #cf4647;
+  animation: l3-1 0.75s cubic-bezier(0, 900, 1, 900) infinite;
+}
+
+.loader--small {
+  --loader-height: 24px;
+  --loader-line: 2px;
+}
+
+.loader--large {
+  --loader-height: 80px;
+  --loader-line: 4px;
+}
+
+@keyframes l3-0 {
+  to { background-position: -125% 100%; }
+}
+
+@keyframes l3-1 {
+  0%, 2% { bottom: 0%; }
+  98%, to { bottom: 0.1%; }
+}

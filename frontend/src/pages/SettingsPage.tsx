@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import Loader from '@/components/common/Loader'
 import { useAuthStore } from '@/store/authStore'
 import { useDataStore } from '@/store/dataStore'
 import { useThemeStore } from '@/store/themeStore'
@@ -16,7 +17,6 @@ import {
   WarningIcon,
   SunIcon,
   MoonIcon,
-  SyncIcon,
   TrashIcon,
 } from '@/components/common/Icons'
 
@@ -272,8 +272,7 @@ function SyncQueuePanel() {
           disabled={syncing || ops.length === 0}
           className="flex items-center gap-1.5 text-sm font-semibold text-secondary hover:underline disabled:opacity-50"
         >
-          <SyncIcon width={14} height={14} className={syncing ? 'animate-spin' : ''} />
-          Retry Now
+          {syncing ? <><Loader size="small" label="Retrying sync" /> Syncing...</> : <><span aria-hidden="true">↻</span> Retry Now</>}
         </button>
       </div>
 

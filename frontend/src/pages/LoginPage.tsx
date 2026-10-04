@@ -5,6 +5,7 @@ import { useDataStore } from '@/store/dataStore'
 import { loginAdmin, loginBranch, sendAdminPasswordReset } from '@/services/auth/authService'
 import { logActivity } from '@/services/activity/activityService'
 import { useTranslation } from '@/store/languageStore'
+import Loader from '@/components/common/Loader'
 import { UserIcon, WarningIcon, CheckIcon } from '@/components/common/Icons'
 
 type Tab = 'admin' | 'branch'
@@ -160,9 +161,9 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={resetLoading}
-                  className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors"
+                  className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
                 >
-                  {resetLoading ? 'Sending...' : 'Send reset link'}
+                  {resetLoading ? <><Loader size="small" label="Sending reset link" /> Sending...</> : 'Send reset link'}
                 </button>
 
                 <button
@@ -211,7 +212,7 @@ export default function LoginPage() {
                   disabled={loading}
                   className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
                 >
-                  {loading ? 'Signing in...' : t('login_signin_admin')}
+                  {loading ? <><Loader size="small" label="Signing in" /> Signing in...</> : t('login_signin_admin')}
                 </button>
               </form>
             ) : (
@@ -243,8 +244,7 @@ export default function LoginPage() {
                   disabled={loading}
                   className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
                 >
-                  <UserIcon width={16} height={16} />
-                  {loading ? 'Signing in...' : t('login_signin_cashier')}
+                  {loading ? <><Loader size="small" label="Signing in" /> Signing in...</> : <><UserIcon width={16} height={16} />{t('login_signin_cashier')}</>}
                 </button>
                 {branches.length === 0 && (
                   <p className="text-xs text-app-faint text-center">

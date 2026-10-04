@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import Modal from '@/components/common/Modal'
+import Loader from '@/components/common/Loader'
 import { useAuthStore } from '@/store/authStore'
 import { useDataStore } from '@/store/dataStore'
 import { syncService } from '@/services/sync/syncService'
@@ -396,7 +397,7 @@ function DeleteBranchModal({
             disabled={loading}
             className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-danger text-white hover:bg-red-600 disabled:opacity-60"
           >
-            {loading ? 'Verifying...' : 'Delete Branch'}
+            {loading ? <span className="inline-flex items-center justify-center gap-2"><Loader size="small" label="Verifying branch deletion" /> Verifying...</span> : 'Delete Branch'}
           </button>
         </div>
       </form>
@@ -490,7 +491,7 @@ function ResetBranchPasswordModal({
         <div className="flex gap-3">
           <button type="button" onClick={() => { reset(); onClose() }} className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-app-hover text-app-body hover:bg-app-hover-strong">Cancel</button>
           <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-primary text-white hover:bg-primary-dark disabled:opacity-60">
-            {loading ? 'Resetting...' : 'Reset password'}
+            {loading ? <span className="inline-flex items-center justify-center gap-2"><Loader size="small" label="Resetting password" /> Resetting...</span> : 'Reset password'}
           </button>
         </div>
       </form>

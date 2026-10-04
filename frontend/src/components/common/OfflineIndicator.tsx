@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { syncService } from '@/services/sync/syncService'
-import { WifiOffIcon, SyncIcon, CheckIcon } from '@/components/common/Icons'
+import { WifiOffIcon, CheckIcon } from '@/components/common/Icons'
+import Loader from '@/components/common/Loader'
 import type { SyncStatus } from '@/types'
 
 export default function OfflineIndicator() {
@@ -50,7 +51,7 @@ export default function OfflineIndicator() {
   if (status.isSyncing || status.pendingCount > 0) {
     return (
       <div className="flex items-center gap-2 bg-warning text-white text-sm font-medium px-4 py-2 w-full">
-        <SyncIcon width={16} height={16} className="animate-spin" />
+        <Loader size="small" label="Syncing changes" className="[--loader-height:16px] [--loader-line:2px]" />
         <span>Syncing changes...</span>
         {status.pendingCount > 0 && (
           <span className="ml-auto bg-white/20 rounded-full px-2 py-0.5 text-xs">{status.pendingCount} pending</span>
