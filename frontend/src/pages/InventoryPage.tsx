@@ -20,7 +20,7 @@ import {
   isLowStock,
   isOutOfStock,
 } from '@/utils/helpers'
-import { PlusIcon, SearchIcon, PrintIcon, BoxIcon, WarningIcon, ReportsIcon, TrashIcon, EditIcon } from '@/components/common/Icons'
+import { PlusIcon, SearchIcon, PrintIcon, BoxIcon, WarningIcon, ReportsIcon } from '@/components/common/Icons'
 import { addBatch, adjustBatchQuantity, ensureBatches, getBatchStatusCounts } from '@/utils/batches'
 import type { StockBatch } from '@/types'
 
@@ -244,8 +244,7 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        <div className="bg-app-card rounded-card shadow-card overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="bg-app-card rounded-card shadow-card">
             {isAdmin ? (
               <AdminInventoryTable
                 items={filtered}
@@ -254,11 +253,11 @@ export default function InventoryPage() {
                 onPrint={handlePrintBarcode}
                 onEditPrices={setPriceTarget}
                 onDelete={setDeleteTarget}
+              onViewDetails={setDetailTarget}
               />
             ) : (
               <CashierInventoryTable items={filtered} onViewDetails={setDetailTarget} />
             )}
-          </div>
         </div>
       </div>
 
@@ -270,6 +269,7 @@ export default function InventoryPage() {
       <ProductDetailModal
         item={detailTarget}
         sales={sales}
+        isAdmin={isAdmin}
         onClose={() => setDetailTarget(null)}
         onAddStock={(item) => {
           setDetailTarget(null)
@@ -280,13 +280,21 @@ export default function InventoryPage() {
           setAdjustTarget(item)
         }}
         onPrint={handlePrintBarcode}
+        onEditPrices={(item) => {
+          setDetailTarget(null)
+          setPriceTarget(item)
+        }}
+        onDelete={(item) => {
+          setDetailTarget(null)
+          setDeleteTarget(item)
+        }}
       />
     </DashboardLayout>
   )
 }
 
 /* ------------------------------------------------------------------ */
-/* Admin table: full detail including buying price and inline actions. */
+/* Admin inventory list with product details and a single actions menu. */
 /* ------------------------------------------------------------------ */
 
 function AdminInventoryTable({
@@ -296,6 +304,7 @@ function AdminInventoryTable({
   onPrint,
   onEditPrices,
   onDelete,
+  onViewDetails,
 }: {
   items: InventoryItem[]
   onAddStock: (item: InventoryItem) => void
@@ -303,30 +312,23 @@ function AdminInventoryTable({
   onPrint: (item: InventoryItem) => void
   onEditPrices: (item: InventoryItem) => void
   onDelete: (item: InventoryItem) => void
+  onViewDetails: (item: InventoryItem) => void
 }) {
   return (
     <>
     <div className="divide-y divide-app-border md:hidden">
       {items.length === 0 ? <p className="px-4 py-10 text-center text-app-faint">No products found</p> : items.map((item) => {
         const status = statusFor(item)
-        return <article key={item.id} className="p-4 space-y-3">
-          <div className="flex justify-between gap-3">
-            <div className="min-w-0"><h3 className="font-semibold text-app-heading break-words">{item.productName}</h3><p className="text-xs text-app-muted">{item.branchName ?? 'Unassigned'}</p></div>
-            <span className={`h-fit shrink-0 px-2 py-1 rounded-full text-xs font-semibold ${status.cls}`}>{status.label}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg bg-app-alt p-3 text-sm">
-            <span className="text-app-muted">Buying price</span><span className="text-right font-semibold tabular-nums whitespace-nowrap">{formatCurrency(item.buyingPrice)}</span>
-            <span className="text-app-muted">Selling price</span><span className="text-right font-semibold text-primary tabular-nums whitespace-nowrap">{formatCurrency(item.sellingPrice)}</span>
-            <span className="text-app-muted">Stock</span><span className="text-right tabular-nums">{item.currentStock.toLocaleString()}</span>
-            <span className="text-app-muted">Expiry</span><span className="text-right">{formatDate(item.expiryDate)}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => onAddStock(item)} className="rounded-md bg-secondary/10 px-2 py-2 text-xs font-semibold text-secondary">Add stock</button>
-            <button onClick={() => onAdjust(item)} className="rounded-md bg-warning/10 px-2 py-2 text-xs font-semibold text-warning">Adjust stock</button>
-            <button onClick={() => onPrint(item)} className="rounded-md bg-primary/10 px-2 py-2 text-xs font-semibold text-primary">Print barcode</button>
-            <button onClick={() => onEditPrices(item)} className="rounded-md bg-primary px-2 py-2 text-xs font-bold text-white">Adjust prices</button>
-            <button onClick={() => onDelete(item)} className="col-span-2 rounded-md bg-danger px-2 py-2 text-xs font-bold text-white">Delete product</button>
-          </div>
+        return <article key={item.id} className="flex items-center justify-between gap-3 p-4 hover:bg-app-alt/40">
+          <button type="button" onClick={() => onViewDetails(item)} className="min-w-0 flex-1 text-left">
+            <span className="flex items-center justify-between gap-3">
+              <span className="min-w-0 font-semibold text-app-heading break-words">{item.productName}</span>
+              <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${status.cls}`}>{status.label}</span>
+            </span>
+            <span className="mt-1 block text-xs text-app-muted">{item.branchName ?? 'Unassigned'} &middot; Stock {item.currentStock.toLocaleString()}</span>
+            <span className="mt-1 block text-sm font-semibold text-primary tabular-nums">Selling {formatCurrency(item.sellingPrice)}</span>
+          </button>
+          <InventoryActionsMenu item={item} onAddStock={onAddStock} onAdjust={onAdjust} onPrint={onPrint} onEditPrices={onEditPrices} onDelete={onDelete} isAdmin />
         </article>
       })}
     </div>
@@ -358,7 +360,9 @@ function AdminInventoryTable({
             return (
               <tr key={item.id} className={idx % 2 === 0 ? 'bg-app-card' : 'bg-app-alt/50'}>
                 <td className="hidden xl:table-cell px-4 py-3 font-mono text-xs text-app-muted">{item.barcode}</td>
-                <td className="px-4 py-3 font-medium text-app-heading">{item.productName}</td>
+                <td className="px-4 py-3 font-medium text-app-heading">
+                  <button type="button" onClick={() => onViewDetails(item)} className="text-left hover:text-primary hover:underline">{item.productName}</button>
+                </td>
                 <td className="hidden xl:table-cell px-4 py-3 text-app-muted">{item.branchName ?? 'Unassigned'}</td>
                 <td className="hidden xl:table-cell px-4 py-3 text-right">{formatCurrency(item.buyingPrice)}</td>
                 <td className="px-4 py-3 text-right">{formatCurrency(item.sellingPrice)}</td>
@@ -367,39 +371,8 @@ function AdminInventoryTable({
                 <td className="hidden lg:table-cell px-4 py-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${status.cls}`}>{status.label}</span>
                 </td>
-                <td className="px-4 py-3">
-                  <div className="grid grid-cols-2 gap-1.5 sm:flex sm:justify-end sm:items-center sm:gap-2">
-                    <button onClick={() => onAddStock(item)} className="text-xs font-semibold text-secondary hover:underline">
-                      Add Stock
-                    </button>
-                    <button onClick={() => onAdjust(item)} className="text-xs font-semibold text-warning hover:underline">
-                      Adjust stock
-                    </button>
-                    <button
-                      onClick={() => onPrint(item)}
-                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-                    >
-                      <PrintIcon width={12} height={12} />
-                      Print
-                    </button>
-                    <button
-                      onClick={() => onEditPrices(item)}
-                      className="inline-flex items-center justify-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                      aria-label={`Edit prices for ${item.productName}`}
-                    >
-                      <EditIcon width={13} height={13} />
-                      Adjust prices
-                    </button>
-                    <button
-                      onClick={() => onDelete(item)}
-                      className="inline-flex items-center gap-1 rounded-md bg-danger px-2.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2"
-                      aria-label={`Delete ${item.productName}`}
-                      title={`Delete ${item.productName}`}
-                    >
-                      <TrashIcon width={13} height={13} />
-                      Delete product
-                    </button>
-                  </div>
+                <td className="px-4 py-3 text-right">
+                  <InventoryActionsMenu item={item} onAddStock={onAddStock} onAdjust={onAdjust} onPrint={onPrint} onEditPrices={onEditPrices} onDelete={onDelete} isAdmin />
                 </td>
               </tr>
             )
@@ -409,6 +382,56 @@ function AdminInventoryTable({
     </table>
     </div>
     </>
+  )
+}
+
+function InventoryActionsMenu({
+  item,
+  onAddStock,
+  onAdjust,
+  onPrint,
+  onEditPrices,
+  onDelete,
+  isAdmin = false,
+}: {
+  item: InventoryItem
+  onAddStock: (item: InventoryItem) => void
+  onAdjust: (item: InventoryItem) => void
+  onPrint: (item: InventoryItem) => void
+  onEditPrices?: (item: InventoryItem) => void
+  onDelete?: (item: InventoryItem) => void
+  isAdmin?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+
+  function run(action: (item: InventoryItem) => void) {
+    setOpen(false)
+    action(item)
+  }
+
+  const actionClass = 'block w-full px-3 py-2 text-left text-sm text-app-body hover:bg-app-alt'
+
+  return (
+    <div className="relative inline-block text-left">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-app-border bg-app-card px-3 py-2 text-sm font-semibold text-app-heading shadow-sm hover:bg-app-alt focus:outline-none focus:ring-2 focus:ring-primary"
+      >
+        Actions
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-lg border border-app-border bg-app-card py-1 shadow-xl">
+          <button type="button" role="menuitem" className={actionClass} onClick={() => run(onAddStock)}>Add stock</button>
+          <button type="button" role="menuitem" className={actionClass} onClick={() => run(onAdjust)}>Adjust stock</button>
+          <button type="button" role="menuitem" className={actionClass} onClick={() => run(onPrint)}>Print barcode</button>
+          {isAdmin && onEditPrices && <button type="button" role="menuitem" className={actionClass} onClick={() => run(onEditPrices)}>Adjust prices</button>}
+          {isAdmin && onDelete && <button type="button" role="menuitem" className="block w-full px-3 py-2 text-left text-sm text-danger hover:bg-red-50" onClick={() => run(onDelete)}>Delete product</button>}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -625,9 +648,8 @@ function CashierInventoryTable({
 }
 
 /* ------------------------------------------------------------------ */
-/* Product detail modal - reachable by any role, but never shows       */
-/* buying price. Includes sales history for this specific product and */
-/* the add-stock / adjust / print-barcode actions.                     */
+/* Product detail modal is shared by both roles; buying price and its  */
+/* edit action appear only for administrators.                         */
 /* ------------------------------------------------------------------ */
 
 function ProductDetailModal({
@@ -637,6 +659,9 @@ function ProductDetailModal({
   onAddStock,
   onAdjust,
   onPrint,
+  isAdmin,
+  onEditPrices,
+  onDelete,
 }: {
   item: InventoryItem | null
   sales: SaleRecord[]
@@ -644,6 +669,9 @@ function ProductDetailModal({
   onAddStock: (item: InventoryItem) => void
   onAdjust: (item: InventoryItem) => void
   onPrint: (item: InventoryItem) => void
+  isAdmin: boolean
+  onEditPrices: (item: InventoryItem) => void
+  onDelete: (item: InventoryItem) => void
 }) {
   const history = useMemo(() => {
     if (!item) return []
@@ -668,9 +696,13 @@ function ProductDetailModal({
     <Modal open={!!item} onClose={onClose} title={item.productName} maxWidth="max-w-lg">
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-3 text-sm">
+          {isAdmin && <div className="bg-app-alt rounded-lg p-3">
+            <div className="text-app-faint text-xs">Buying Price</div>
+            <div className="font-bold text-app-heading tabular-nums">{formatCurrency(item.buyingPrice)}</div>
+          </div>}
           <div className="bg-app-alt rounded-lg p-3">
             <div className="text-app-faint text-xs">Selling Price</div>
-            <div className="font-bold text-primary">{formatCurrency(item.sellingPrice)}</div>
+            <div className="font-bold text-primary tabular-nums">{formatCurrency(item.sellingPrice)}</div>
           </div>
           <div className="bg-app-alt rounded-lg p-3">
             <div className="text-app-faint text-xs">Sellable Stock</div>
@@ -734,26 +766,8 @@ function ProductDetailModal({
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            onClick={() => onAddStock(item)}
-            className="py-2.5 rounded-lg text-xs font-semibold bg-secondary/10 text-secondary hover:bg-secondary/20 transition-colors"
-          >
-            Add stock
-          </button>
-          <button
-            onClick={() => onAdjust(item)}
-            className="py-2.5 rounded-lg text-xs font-semibold bg-warning/10 text-warning hover:bg-warning/20 transition-colors"
-          >
-            Adjust
-          </button>
-          <button
-            onClick={() => onPrint(item)}
-            className="flex items-center justify-center gap-1 py-2.5 rounded-lg text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-          >
-            <PrintIcon width={13} height={13} />
-            Print barcode
-          </button>
+        <div className="flex justify-end">
+          <InventoryActionsMenu item={item} onAddStock={onAddStock} onAdjust={onAdjust} onPrint={onPrint} isAdmin={isAdmin} onEditPrices={onEditPrices} onDelete={onDelete} />
         </div>
 
         <div>
