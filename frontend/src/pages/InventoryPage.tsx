@@ -489,11 +489,11 @@ function EditProductPricesModal({
       setError('Selling price cannot be lower than the buying price.')
       return
     }
-    onSubmit(item, buying, selling)
+    onSubmit(item!, buying, selling)
   }
 
   return (
-    <Modal open={!!item} onClose={onClose} title="Edit Product Prices">
+    <Modal open={!!item} onClose={onClose} title="Adjust Item Prices">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="rounded-lg bg-app-alt px-3.5 py-3">
           <div className="font-semibold text-app-heading">{item.productName}</div>
