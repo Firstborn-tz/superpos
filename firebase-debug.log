@@ -1,0 +1,321 @@
+[debug] [2026-10-04T13:02:38.596Z] ----------------------------------------------------------------------
+[debug] [2026-10-04T13:02:38.604Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\willy\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js hosting:sites:list --project supermarketpos-464da
+[debug] [2026-10-04T13:02:38.604Z] CLI Version:   15.28.1
+[debug] [2026-10-04T13:02:38.604Z] Platform:      win32
+[debug] [2026-10-04T13:02:38.604Z] Node Version:  v24.19.0
+[debug] [2026-10-04T13:02:38.605Z] Detected Agent: codex_cli
+[debug] [2026-10-04T13:02:38.605Z] Time:          Sun Oct 04 2026 16:02:38 GMT+0300 (East Africa Time)
+[debug] [2026-10-04T13:02:38.605Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-10-04T13:02:38.629Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-10-04T13:02:38.820Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-10-04T13:02:38.820Z] > authorizing via signed-in user (sengasusupermarket@gmail.com)
+[debug] [2026-10-04T13:02:38.821Z] [iam] checking project supermarketpos-464da for permissions ["firebase.projects.get","firebasehosting.sites.get"]
+[debug] [2026-10-04T13:02:38.822Z] Checked if tokens are valid: false, expires at: 1791116136860
+[debug] [2026-10-04T13:02:38.822Z] Checked if tokens are valid: false, expires at: 1791116136860
+[debug] [2026-10-04T13:02:38.823Z] > refreshing access token with scopes: []
+[debug] [2026-10-04T13:02:38.825Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-10-04T13:02:38.825Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-10-04T13:02:39.351Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-10-04T13:02:39.351Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-10-04T13:02:39.359Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions [none]
+[debug] [2026-10-04T13:02:39.360Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions  x-goog-user-project=supermarketpos-464da
+[debug] [2026-10-04T13:02:39.360Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.get"]}
+[debug] [2026-10-04T13:02:39.793Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-10-04T13:02:39.793Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-10-04T13:02:41.585Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions 200
+[debug] [2026-10-04T13:02:41.585Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.get"]}
+[debug] [2026-10-04T13:02:41.586Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:02:41.586Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:02:41.586Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/supermarketpos-464da/sites pageToken=&pageSize=10
+[debug] [2026-10-04T13:02:44.446Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/supermarketpos-464da/sites 200
+[debug] [2026-10-04T13:02:44.446Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/supermarketpos-464da/sites {"sites":[{"name":"projects/supermarketpos-464da/sites/supermarketpos-464da","defaultUrl":"https://supermarketpos-464da.web.app","type":"DEFAULT_SITE"}]}
+[info] 
+[info] Sites for project supermarketpos-464da
+[info] 
+[info] ┌──────────────────────┬──────────────────────────────────────┬─────────────────┐
+│ Site ID              │ Default URL                          │ App ID (if set) │
+├──────────────────────┼──────────────────────────────────────┼─────────────────┤
+│ supermarketpos-464da │ https://supermarketpos-464da.web.app │ --              │
+└──────────────────────┴──────────────────────────────────────┴─────────────────┘
+[debug] [2026-10-04T13:02:55.651Z] ----------------------------------------------------------------------
+[debug] [2026-10-04T13:02:55.653Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\willy\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js hosting:channel:list --site supermarketpos-464da --project supermarketpos-464da
+[debug] [2026-10-04T13:02:55.654Z] CLI Version:   15.28.1
+[debug] [2026-10-04T13:02:55.654Z] Platform:      win32
+[debug] [2026-10-04T13:02:55.654Z] Node Version:  v24.19.0
+[debug] [2026-10-04T13:02:55.654Z] Detected Agent: codex_cli
+[debug] [2026-10-04T13:02:55.654Z] Time:          Sun Oct 04 2026 16:02:55 GMT+0300 (East Africa Time)
+[debug] [2026-10-04T13:02:55.654Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-10-04T13:02:55.818Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-10-04T13:02:55.819Z] > authorizing via signed-in user (sengasusupermarket@gmail.com)
+[debug] [2026-10-04T13:02:55.819Z] [iam] checking project supermarketpos-464da for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-10-04T13:02:55.834Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:02:55.835Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:02:55.836Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions [none]
+[debug] [2026-10-04T13:02:55.836Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions  x-goog-user-project=supermarketpos-464da
+[debug] [2026-10-04T13:02:55.836Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-10-04T13:02:57.821Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions 200
+[debug] [2026-10-04T13:02:57.821Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-10-04T13:02:57.822Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:02:57.822Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:02:57.822Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/supermarketpos-464da/sites/supermarketpos-464da/channels pageToken=&pageSize=10
+[debug] [2026-10-04T13:02:59.268Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/supermarketpos-464da/sites/supermarketpos-464da/channels 200
+[debug] [2026-10-04T13:02:59.268Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/supermarketpos-464da/sites/supermarketpos-464da/channels {"channels":[{"name":"projects/supermarketpos-464da/sites/supermarketpos-464da/channels/live","url":"https://supermarketpos-464da.web.app","createTime":"2026-09-04T09:13:42.810429235Z","updateTime":"2026-09-04T09:13:42.810429235Z","retainedReleaseCount":2147483647}]}
+[info] 
+[info] Channels for site supermarketpos-464da
+[info] 
+[info] ┌────────────┬─────────────────────┬──────────────────────────────────────┬─────────────┐
+│ Channel ID │ Last Release Time   │ URL                                  │ Expire Time │
+├────────────┼─────────────────────┼──────────────────────────────────────┼─────────────┤
+│ live       │ 2026-09-04 12:13:42 │ https://supermarketpos-464da.web.app │ never       │
+└────────────┴─────────────────────┴──────────────────────────────────────┴─────────────┘
+[debug] [2026-10-04T13:03:09.346Z] ----------------------------------------------------------------------
+[debug] [2026-10-04T13:03:09.349Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\willy\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting --project supermarketpos-464da
+[debug] [2026-10-04T13:03:09.349Z] CLI Version:   15.28.1
+[debug] [2026-10-04T13:03:09.349Z] Platform:      win32
+[debug] [2026-10-04T13:03:09.349Z] Node Version:  v24.19.0
+[debug] [2026-10-04T13:03:09.350Z] Detected Agent: codex_cli
+[debug] [2026-10-04T13:03:09.350Z] Time:          Sun Oct 04 2026 16:03:09 GMT+0300 (East Africa Time)
+[debug] [2026-10-04T13:03:09.350Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-10-04T13:03:12.591Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-10-04T13:03:12.591Z] > authorizing via signed-in user (sengasusupermarket@gmail.com)
+[debug] [2026-10-04T13:03:12.591Z] [iam] checking project supermarketpos-464da for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-10-04T13:03:12.602Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:12.602Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:12.603Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions [none]
+[debug] [2026-10-04T13:03:12.604Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions  x-goog-user-project=supermarketpos-464da
+[debug] [2026-10-04T13:03:12.604Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-10-04T13:03:14.528Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions 200
+[debug] [2026-10-04T13:03:14.528Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-10-04T13:03:14.529Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:14.529Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:14.529Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/supermarketpos-464da [none]
+[debug] [2026-10-04T13:03:15.740Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/supermarketpos-464da 200
+[debug] [2026-10-04T13:03:15.740Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/supermarketpos-464da {"projectId":"supermarketpos-464da","projectNumber":"926759395935","displayName":"supermarketpos","name":"projects/supermarketpos-464da","resources":{"hostingSite":"supermarketpos-464da"},"state":"ACTIVE","labels":{"firebase":"enabled","firebaseworkflows/environment":"unspecified"},"etag":"1_85533ebd-afc8-4bf2-9f75-c515629cb084"}
+[info] 
+[info] === Deploying to 'supermarketpos-464da'...
+[info] 
+[info] i  deploying hosting 
+[debug] [2026-10-04T13:03:15.749Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:15.749Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:15.750Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/supermarketpos-464da/sites/supermarketpos-464da [none]
+[debug] [2026-10-04T13:03:18.295Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/supermarketpos-464da/sites/supermarketpos-464da 200
+[debug] [2026-10-04T13:03:18.295Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/supermarketpos-464da/sites/supermarketpos-464da {"name":"projects/supermarketpos-464da/sites/supermarketpos-464da","defaultUrl":"https://supermarketpos-464da.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-10-04T13:03:18.298Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:18.298Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:18.299Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/supermarketpos-464da/versions [none]
+[debug] [2026-10-04T13:03:18.299Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/supermarketpos-464da/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-10-04T13:03:21.293Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/supermarketpos-464da/versions 200
+[debug] [2026-10-04T13:03:21.293Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/supermarketpos-464da/versions {"name":"projects/926759395935/sites/supermarketpos-464da/versions/09574eab5dc3caf5","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[info] i  hosting[supermarketpos-464da]: beginning deploy... 
+[info] i  hosting[supermarketpos-464da]: found 16 files in frontend/dist 
+[debug] [2026-10-04T13:03:21.307Z] [hosting] uploading with 200 concurrency
+[debug] [2026-10-04T13:03:21.368Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:21.369Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:21.370Z] [hosting] hash cache [ZnJvbnRlbmRcZGlzdA] stored for 16 files
+[debug] [2026-10-04T13:03:21.371Z] [hosting][hash queue][FINAL] {"max":55,"min":5,"avg":11.375,"active":0,"complete":16,"success":16,"errored":0,"retried":0,"total":16,"elapsed":61}
+[debug] [2026-10-04T13:03:21.371Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/926759395935/sites/supermarketpos-464da/versions/09574eab5dc3caf5:populateFiles [none]
+[debug] [2026-10-04T13:03:21.371Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/926759395935/sites/supermarketpos-464da/versions/09574eab5dc3caf5:populateFiles {"files":{"/robots.txt":"0661a5d088aad7ef05c1806671ce0a88b9fad000f90922aabc082d6b573fbf67","/registerSW.js":"09e15d1438017c065a3281739cb5506aeaf7b3047bc3ada992da01d4497c2d43","/index.html":"8e1750deaaade13cf67030034f01fd10f341a1f846c4738964db8c1ceb370462","/sw.js":"9a49ad911d8100b02e9c54f83c02dd813f85f03efc9a2f09e79115a973385c23","/icon-192.png":"d9462c9705718dad9dadbb915de3721155811dc2335ec75653e913e8c491b03f","/assets/zustand-DK1gR5wO.js":"72a93cc57a206076c17a658fa390fee161ab48a751d961309327928d7ca8b4df","/favicon.svg":"b344541018efff2e7ad70dcde59c502d5011f0b15b0216de5d66f363595c1f47","/manifest.webmanifest":"f3c1000ad614b4bf8852c6c38d790411efc4216cdeec44a1d5c6b8ae353ea4ca","/icon-512.png":"538a750e5cfd3d2f614702b30e2c8005f00d7628f4ab46923274bf5e4316da29","/workbox-bdb082da.js":"138d7fd2842fac8729b223086e6a28edac14a93157ad2a2b3560ee59a2be1035","/assets/index-ow_OjheS.css":"56a3e8052d1bcf903325830fe884f363ec3b07c8669373f766287374e56c6c3f","/assets/vendor-BVxpBDMc.js":"889a55f67872b5d8279e8677af7a543356fd5eb1af6281623544c91b14e4a89f","/assets/charts-jdZ-QJhd.js":"267688d83a56b0513f2b7632cfc928ad8aa218114867b7d557efeb175333aa4d","/assets/index-D_TFt-8a.js":"cedb12c3e5109a9f90d99d3077af90f96f0aeb13043b1ae7c50d50c49c66f22c","/assets/firebase-OETDp-3h.js":"9b371241ae45dd179adaf8681bee4ebb744c6ec5e06fb217fa0a80d9002d3c97","/assets/index-r0Fk5WcO.js":"bc255deb83f141f2d5fce93ebe3bdc3ddaa8d9ad67630656ec23d4b99bef2c60"}}
+[debug] [2026-10-04T13:03:22.548Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/926759395935/sites/supermarketpos-464da/versions/09574eab5dc3caf5:populateFiles 200
+[debug] [2026-10-04T13:03:22.549Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/926759395935/sites/supermarketpos-464da/versions/09574eab5dc3caf5:populateFiles {"uploadRequiredHashes":["f3c1000ad614b4bf8852c6c38d790411efc4216cdeec44a1d5c6b8ae353ea4ca","56a3e8052d1bcf903325830fe884f363ec3b07c8669373f766287374e56c6c3f","bc255deb83f141f2d5fce93ebe3bdc3ddaa8d9ad67630656ec23d4b99bef2c60","8e1750deaaade13cf67030034f01fd10f341a1f846c4738964db8c1ceb370462","72a93cc57a206076c17a658fa390fee161ab48a751d961309327928d7ca8b4df","b344541018efff2e7ad70dcde59c502d5011f0b15b0216de5d66f363595c1f47","267688d83a56b0513f2b7632cfc928ad8aa218114867b7d557efeb175333aa4d","9a49ad911d8100b02e9c54f83c02dd813f85f03efc9a2f09e79115a973385c23","d9462c9705718dad9dadbb915de3721155811dc2335ec75653e913e8c491b03f","9b371241ae45dd179adaf8681bee4ebb744c6ec5e06fb217fa0a80d9002d3c97","538a750e5cfd3d2f614702b30e2c8005f00d7628f4ab46923274bf5e4316da29","0661a5d088aad7ef05c1806671ce0a88b9fad000f90922aabc082d6b573fbf67","cedb12c3e5109a9f90d99d3077af90f96f0aeb13043b1ae7c50d50c49c66f22c","09e15d1438017c065a3281739cb5506aeaf7b3047bc3ada992da01d4497c2d43","889a55f67872b5d8279e8677af7a543356fd5eb1af6281623544c91b14e4a89f","138d7fd2842fac8729b223086e6a28edac14a93157ad2a2b3560ee59a2be1035"],"uploadUrl":"https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files"}
+[debug] [2026-10-04T13:03:22.550Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.550Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.550Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.550Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.551Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.551Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.551Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.551Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.551Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.551Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.552Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.552Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.552Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.552Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.552Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.552Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.552Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.553Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.553Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.553Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.553Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.553Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.553Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.553Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.554Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.554Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.554Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.554Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.554Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.555Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.555Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.555Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:22.555Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/f3c1000ad614b4bf8852c6c38d790411efc4216cdeec44a1d5c6b8ae353ea4ca [none]
+[debug] [2026-10-04T13:03:22.555Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/f3c1000ad614b4bf8852c6c38d790411efc4216cdeec44a1d5c6b8ae353ea4ca [stream]
+[debug] [2026-10-04T13:03:22.557Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/56a3e8052d1bcf903325830fe884f363ec3b07c8669373f766287374e56c6c3f [none]
+[debug] [2026-10-04T13:03:22.558Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/56a3e8052d1bcf903325830fe884f363ec3b07c8669373f766287374e56c6c3f [stream]
+[debug] [2026-10-04T13:03:22.558Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/bc255deb83f141f2d5fce93ebe3bdc3ddaa8d9ad67630656ec23d4b99bef2c60 [none]
+[debug] [2026-10-04T13:03:22.559Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/bc255deb83f141f2d5fce93ebe3bdc3ddaa8d9ad67630656ec23d4b99bef2c60 [stream]
+[debug] [2026-10-04T13:03:22.559Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/8e1750deaaade13cf67030034f01fd10f341a1f846c4738964db8c1ceb370462 [none]
+[debug] [2026-10-04T13:03:22.560Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/8e1750deaaade13cf67030034f01fd10f341a1f846c4738964db8c1ceb370462 [stream]
+[debug] [2026-10-04T13:03:22.561Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/72a93cc57a206076c17a658fa390fee161ab48a751d961309327928d7ca8b4df [none]
+[debug] [2026-10-04T13:03:22.561Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/72a93cc57a206076c17a658fa390fee161ab48a751d961309327928d7ca8b4df [stream]
+[debug] [2026-10-04T13:03:22.561Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/b344541018efff2e7ad70dcde59c502d5011f0b15b0216de5d66f363595c1f47 [none]
+[debug] [2026-10-04T13:03:22.562Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/b344541018efff2e7ad70dcde59c502d5011f0b15b0216de5d66f363595c1f47 [stream]
+[debug] [2026-10-04T13:03:22.562Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/267688d83a56b0513f2b7632cfc928ad8aa218114867b7d557efeb175333aa4d [none]
+[debug] [2026-10-04T13:03:22.562Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/267688d83a56b0513f2b7632cfc928ad8aa218114867b7d557efeb175333aa4d [stream]
+[debug] [2026-10-04T13:03:22.563Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/9a49ad911d8100b02e9c54f83c02dd813f85f03efc9a2f09e79115a973385c23 [none]
+[debug] [2026-10-04T13:03:22.563Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/9a49ad911d8100b02e9c54f83c02dd813f85f03efc9a2f09e79115a973385c23 [stream]
+[debug] [2026-10-04T13:03:22.563Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/d9462c9705718dad9dadbb915de3721155811dc2335ec75653e913e8c491b03f [none]
+[debug] [2026-10-04T13:03:22.564Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/d9462c9705718dad9dadbb915de3721155811dc2335ec75653e913e8c491b03f [stream]
+[debug] [2026-10-04T13:03:22.564Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/9b371241ae45dd179adaf8681bee4ebb744c6ec5e06fb217fa0a80d9002d3c97 [none]
+[debug] [2026-10-04T13:03:22.566Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/9b371241ae45dd179adaf8681bee4ebb744c6ec5e06fb217fa0a80d9002d3c97 [stream]
+[debug] [2026-10-04T13:03:22.567Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/538a750e5cfd3d2f614702b30e2c8005f00d7628f4ab46923274bf5e4316da29 [none]
+[debug] [2026-10-04T13:03:22.567Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/538a750e5cfd3d2f614702b30e2c8005f00d7628f4ab46923274bf5e4316da29 [stream]
+[debug] [2026-10-04T13:03:22.568Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/0661a5d088aad7ef05c1806671ce0a88b9fad000f90922aabc082d6b573fbf67 [none]
+[debug] [2026-10-04T13:03:22.568Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/0661a5d088aad7ef05c1806671ce0a88b9fad000f90922aabc082d6b573fbf67 [stream]
+[debug] [2026-10-04T13:03:22.568Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/cedb12c3e5109a9f90d99d3077af90f96f0aeb13043b1ae7c50d50c49c66f22c [none]
+[debug] [2026-10-04T13:03:22.569Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/cedb12c3e5109a9f90d99d3077af90f96f0aeb13043b1ae7c50d50c49c66f22c [stream]
+[debug] [2026-10-04T13:03:22.569Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/09e15d1438017c065a3281739cb5506aeaf7b3047bc3ada992da01d4497c2d43 [none]
+[debug] [2026-10-04T13:03:22.569Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/09e15d1438017c065a3281739cb5506aeaf7b3047bc3ada992da01d4497c2d43 [stream]
+[debug] [2026-10-04T13:03:22.570Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/889a55f67872b5d8279e8677af7a543356fd5eb1af6281623544c91b14e4a89f [none]
+[debug] [2026-10-04T13:03:22.570Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/889a55f67872b5d8279e8677af7a543356fd5eb1af6281623544c91b14e4a89f [stream]
+[debug] [2026-10-04T13:03:22.570Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/138d7fd2842fac8729b223086e6a28edac14a93157ad2a2b3560ee59a2be1035 [none]
+[debug] [2026-10-04T13:03:22.570Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/138d7fd2842fac8729b223086e6a28edac14a93157ad2a2b3560ee59a2be1035 [stream]
+[debug] [2026-10-04T13:03:22.608Z] [hosting][populate queue][FINAL] {"max":1187,"min":1187,"avg":1187,"active":0,"complete":1,"success":1,"errored":0,"retried":0,"total":1,"elapsed":1240}
+[debug] [2026-10-04T13:03:22.608Z] [hosting] uploads queued: 16
+[info] i  hosting: uploading new files [0/16] (0%) 
+[debug] [2026-10-04T13:03:24.017Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/b344541018efff2e7ad70dcde59c502d5011f0b15b0216de5d66f363595c1f47 200
+[debug] [2026-10-04T13:03:24.017Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/b344541018efff2e7ad70dcde59c502d5011f0b15b0216de5d66f363595c1f47 [stream]
+[debug] [2026-10-04T13:03:24.021Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/72a93cc57a206076c17a658fa390fee161ab48a751d961309327928d7ca8b4df 200
+[debug] [2026-10-04T13:03:24.021Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/72a93cc57a206076c17a658fa390fee161ab48a751d961309327928d7ca8b4df [stream]
+[debug] [2026-10-04T13:03:24.096Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/0661a5d088aad7ef05c1806671ce0a88b9fad000f90922aabc082d6b573fbf67 200
+[debug] [2026-10-04T13:03:24.097Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/0661a5d088aad7ef05c1806671ce0a88b9fad000f90922aabc082d6b573fbf67 [stream]
+[debug] [2026-10-04T13:03:24.098Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/f3c1000ad614b4bf8852c6c38d790411efc4216cdeec44a1d5c6b8ae353ea4ca 200
+[debug] [2026-10-04T13:03:24.098Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/f3c1000ad614b4bf8852c6c38d790411efc4216cdeec44a1d5c6b8ae353ea4ca [stream]
+[debug] [2026-10-04T13:03:24.117Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/8e1750deaaade13cf67030034f01fd10f341a1f846c4738964db8c1ceb370462 200
+[debug] [2026-10-04T13:03:24.117Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/8e1750deaaade13cf67030034f01fd10f341a1f846c4738964db8c1ceb370462 [stream]
+[debug] [2026-10-04T13:03:24.167Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/56a3e8052d1bcf903325830fe884f363ec3b07c8669373f766287374e56c6c3f 200
+[debug] [2026-10-04T13:03:24.168Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/56a3e8052d1bcf903325830fe884f363ec3b07c8669373f766287374e56c6c3f [stream]
+[debug] [2026-10-04T13:03:24.179Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/889a55f67872b5d8279e8677af7a543356fd5eb1af6281623544c91b14e4a89f 200
+[debug] [2026-10-04T13:03:24.179Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/889a55f67872b5d8279e8677af7a543356fd5eb1af6281623544c91b14e4a89f [stream]
+[debug] [2026-10-04T13:03:24.189Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/9a49ad911d8100b02e9c54f83c02dd813f85f03efc9a2f09e79115a973385c23 200
+[debug] [2026-10-04T13:03:24.190Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/9a49ad911d8100b02e9c54f83c02dd813f85f03efc9a2f09e79115a973385c23 [stream]
+[debug] [2026-10-04T13:03:24.250Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/138d7fd2842fac8729b223086e6a28edac14a93157ad2a2b3560ee59a2be1035 200
+[debug] [2026-10-04T13:03:24.251Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/138d7fd2842fac8729b223086e6a28edac14a93157ad2a2b3560ee59a2be1035 [stream]
+[debug] [2026-10-04T13:03:24.252Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/538a750e5cfd3d2f614702b30e2c8005f00d7628f4ab46923274bf5e4316da29 200
+[debug] [2026-10-04T13:03:24.252Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/538a750e5cfd3d2f614702b30e2c8005f00d7628f4ab46923274bf5e4316da29 [stream]
+[debug] [2026-10-04T13:03:24.281Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/09e15d1438017c065a3281739cb5506aeaf7b3047bc3ada992da01d4497c2d43 200
+[debug] [2026-10-04T13:03:24.281Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/09e15d1438017c065a3281739cb5506aeaf7b3047bc3ada992da01d4497c2d43 [stream]
+[debug] [2026-10-04T13:03:24.321Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/d9462c9705718dad9dadbb915de3721155811dc2335ec75653e913e8c491b03f 200
+[debug] [2026-10-04T13:03:24.322Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/d9462c9705718dad9dadbb915de3721155811dc2335ec75653e913e8c491b03f [stream]
+[debug] [2026-10-04T13:03:24.410Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/cedb12c3e5109a9f90d99d3077af90f96f0aeb13043b1ae7c50d50c49c66f22c 200
+[debug] [2026-10-04T13:03:24.410Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/cedb12c3e5109a9f90d99d3077af90f96f0aeb13043b1ae7c50d50c49c66f22c [stream]
+[debug] [2026-10-04T13:03:24.605Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/267688d83a56b0513f2b7632cfc928ad8aa218114867b7d557efeb175333aa4d 200
+[debug] [2026-10-04T13:03:24.605Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/267688d83a56b0513f2b7632cfc928ad8aa218114867b7d557efeb175333aa4d [stream]
+[debug] [2026-10-04T13:03:24.736Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/bc255deb83f141f2d5fce93ebe3bdc3ddaa8d9ad67630656ec23d4b99bef2c60 200
+[debug] [2026-10-04T13:03:24.736Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/bc255deb83f141f2d5fce93ebe3bdc3ddaa8d9ad67630656ec23d4b99bef2c60 [stream]
+[info] i  hosting: uploading new files [15/16] (93%) 
+[debug] [2026-10-04T13:03:25.335Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/9b371241ae45dd179adaf8681bee4ebb744c6ec5e06fb217fa0a80d9002d3c97 200
+[debug] [2026-10-04T13:03:25.335Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/supermarketpos-464da/versions/09574eab5dc3caf5/files/9b371241ae45dd179adaf8681bee4ebb744c6ec5e06fb217fa0a80d9002d3c97 [stream]
+[debug] [2026-10-04T13:03:25.335Z] [hosting][upload queue][FINAL] {"max":2782,"min":1466,"avg":1765.5,"active":0,"complete":16,"success":16,"errored":0,"retried":0,"total":16,"elapsed":2786}
+[info] i  hosting: upload complete 
+[info] +  hosting[supermarketpos-464da]: file upload complete 
+[debug] [2026-10-04T13:03:25.336Z] [hosting] deploy completed after 4040ms
+[debug] [2026-10-04T13:03:25.337Z] [
+  {
+    "config": {
+      "public": "frontend/dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "source": "**/*.@(js|css|png|jpg|jpeg|svg|woff2)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        },
+        {
+          "source": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        }
+      ],
+      "site": "supermarketpos-464da"
+    },
+    "version": "projects/926759395935/sites/supermarketpos-464da/versions/09574eab5dc3caf5"
+  }
+]
+[info] i  hosting[supermarketpos-464da]: finalizing version... 
+[debug] [2026-10-04T13:03:25.340Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:25.340Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:25.341Z] >>> [apiv2][query] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/supermarketpos-464da/versions/09574eab5dc3caf5 updateMask=status%2Cconfig
+[debug] [2026-10-04T13:03:25.341Z] >>> [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/supermarketpos-464da/versions/09574eab5dc3caf5 {"status":"FINALIZED","config":{"rewrites":[{"glob":"**","path":"/index.html"}],"headers":[{"glob":"**/*.@(js|css|png|jpg|jpeg|svg|woff2)","headers":{"Cache-Control":"public, max-age=31536000, immutable"}},{"glob":"/index.html","headers":{"Cache-Control":"no-cache"}}]}}
+[debug] [2026-10-04T13:03:27.074Z] <<< [apiv2][status] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/supermarketpos-464da/versions/09574eab5dc3caf5 200
+[debug] [2026-10-04T13:03:27.074Z] <<< [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/supermarketpos-464da/versions/09574eab5dc3caf5 {"name":"projects/926759395935/sites/supermarketpos-464da/versions/09574eab5dc3caf5","status":"FINALIZED","config":{"headers":[{"headers":{"Cache-Control":"public, max-age=31536000, immutable"},"glob":"**/*.@(js|css|png|jpg|jpeg|svg|woff2)"},{"headers":{"Cache-Control":"no-cache"},"glob":"/index.html"}],"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-10-04T13:03:19.119740Z","createUser":{"email":"sengasusupermarket@gmail.com"},"finalizeTime":"2026-10-04T13:03:26.726323Z","finalizeUser":{"email":"sengasusupermarket@gmail.com"}}
+[debug] [2026-10-04T13:03:27.074Z] [hosting] finalized version for supermarketpos-464da:[object Object]
+[info] +  hosting[supermarketpos-464da]: version finalized 
+[info] i  hosting[supermarketpos-464da]: releasing new version... 
+[debug] [2026-10-04T13:03:27.074Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:27.074Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:27.075Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/supermarketpos-464da/channels/live/releases versionName=projects%2F926759395935%2Fsites%2Fsupermarketpos-464da%2Fversions%2F09574eab5dc3caf5
+[debug] [2026-10-04T13:03:27.075Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/supermarketpos-464da/channels/live/releases {}
+[debug] [2026-10-04T13:03:28.580Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/supermarketpos-464da/channels/live/releases 200
+[debug] [2026-10-04T13:03:28.580Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/supermarketpos-464da/channels/live/releases {"name":"projects/926759395935/sites/supermarketpos-464da/channels/live/releases/1791119007284000","version":{"name":"projects/926759395935/sites/supermarketpos-464da/versions/09574eab5dc3caf5","status":"FINALIZED","config":{"headers":[{"headers":{"Cache-Control":"public, max-age=31536000, immutable"},"glob":"**/*.@(js|css|png|jpg|jpeg|svg|woff2)"},{"headers":{"Cache-Control":"no-cache"},"glob":"/index.html"}],"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-10-04T13:03:19.119740Z","createUser":{"email":"sengasusupermarket@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocIDKJfQrN0T8l3PwV3S3HQPWd0zYzs83sJ_74MMpnbQyTbtBlI"},"finalizeTime":"2026-10-04T13:03:26.726323Z","finalizeUser":{"email":"sengasusupermarket@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocIDKJfQrN0T8l3PwV3S3HQPWd0zYzs83sJ_74MMpnbQyTbtBlI"}},"type":"DEPLOY","releaseTime":"2026-10-04T13:03:27.284Z","releaseUser":{"email":"sengasusupermarket@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocIDKJfQrN0T8l3PwV3S3HQPWd0zYzs83sJ_74MMpnbQyTbtBlI"}}
+[debug] [2026-10-04T13:03:28.580Z] [hosting] release: {"name":"projects/926759395935/sites/supermarketpos-464da/channels/live/releases/1791119007284000","version":{"name":"projects/926759395935/sites/supermarketpos-464da/versions/09574eab5dc3caf5","status":"FINALIZED","config":{"headers":[{"headers":{"Cache-Control":"public, max-age=31536000, immutable"},"glob":"**/*.@(js|css|png|jpg|jpeg|svg|woff2)"},{"headers":{"Cache-Control":"no-cache"},"glob":"/index.html"}],"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-10-04T13:03:19.119740Z","createUser":{"email":"sengasusupermarket@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocIDKJfQrN0T8l3PwV3S3HQPWd0zYzs83sJ_74MMpnbQyTbtBlI"},"finalizeTime":"2026-10-04T13:03:26.726323Z","finalizeUser":{"email":"sengasusupermarket@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocIDKJfQrN0T8l3PwV3S3HQPWd0zYzs83sJ_74MMpnbQyTbtBlI"}},"type":"DEPLOY","releaseTime":"2026-10-04T13:03:27.284Z","releaseUser":{"email":"sengasusupermarket@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocIDKJfQrN0T8l3PwV3S3HQPWd0zYzs83sJ_74MMpnbQyTbtBlI"}}
+[info] +  hosting[supermarketpos-464da]: release complete 
+[info] 
+[info] +  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/supermarketpos-464da/overview
+[info] Hosting URL: https://supermarketpos-464da.web.app
+[debug] [2026-10-04T13:03:49.709Z] ----------------------------------------------------------------------
+[debug] [2026-10-04T13:03:49.712Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\willy\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js hosting:channel:list --site supermarketpos-464da --project supermarketpos-464da
+[debug] [2026-10-04T13:03:49.712Z] CLI Version:   15.28.1
+[debug] [2026-10-04T13:03:49.712Z] Platform:      win32
+[debug] [2026-10-04T13:03:49.712Z] Node Version:  v24.19.0
+[debug] [2026-10-04T13:03:49.713Z] Detected Agent: codex_cli
+[debug] [2026-10-04T13:03:49.714Z] Time:          Sun Oct 04 2026 16:03:49 GMT+0300 (East Africa Time)
+[debug] [2026-10-04T13:03:49.714Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-10-04T13:03:49.895Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-10-04T13:03:49.895Z] > authorizing via signed-in user (sengasusupermarket@gmail.com)
+[debug] [2026-10-04T13:03:49.896Z] [iam] checking project supermarketpos-464da for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-10-04T13:03:49.917Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:49.918Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:49.919Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions [none]
+[debug] [2026-10-04T13:03:49.919Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions  x-goog-user-project=supermarketpos-464da
+[debug] [2026-10-04T13:03:49.919Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-10-04T13:03:51.876Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions 200
+[debug] [2026-10-04T13:03:51.876Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/supermarketpos-464da:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-10-04T13:03:51.877Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:51.877Z] Checked if tokens are valid: true, expires at: 1791122558351
+[debug] [2026-10-04T13:03:51.877Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/supermarketpos-464da/sites/supermarketpos-464da/channels pageToken=&pageSize=10
+[debug] [2026-10-04T13:03:53.930Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/supermarketpos-464da/sites/supermarketpos-464da/channels 200
+[debug] [2026-10-04T13:03:53.930Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/supermarketpos-464da/sites/supermarketpos-464da/channels {"channels":[{"name":"projects/supermarketpos-464da/sites/supermarketpos-464da/channels/live","url":"https://supermarketpos-464da.web.app","release":{"name":"projects/supermarketpos-464da/sites/supermarketpos-464da/channels/live/releases/1791119007284000","version":{"name":"projects/supermarketpos-464da/sites/supermarketpos-464da/versions/09574eab5dc3caf5","status":"FINALIZED","config":{"headers":[{"headers":{"Cache-Control":"public, max-age=31536000, immutable"},"glob":"**/*.@(js|css|png|jpg|jpeg|svg|woff2)"},{"headers":{"Cache-Control":"no-cache"},"glob":"/index.html"}],"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-10-04T13:03:19.119740Z","createUser":{"email":"sengasusupermarket@gmail.com"},"finalizeTime":"2026-10-04T13:03:26.726323Z","finalizeUser":{"email":"sengasusupermarket@gmail.com"}},"type":"DEPLOY","releaseTime":"2026-10-04T13:03:27.284Z","releaseUser":{"email":"sengasusupermarket@gmail.com"}},"createTime":"2026-09-04T09:13:42.810429235Z","updateTime":"2026-10-04T13:03:27.284Z","retainedReleaseCount":2147483647}]}
+[info] 
+[info] Channels for site supermarketpos-464da
+[info] 
+[info] ┌────────────┬─────────────────────┬──────────────────────────────────────┬─────────────┐
+│ Channel ID │ Last Release Time   │ URL                                  │ Expire Time │
+├────────────┼─────────────────────┼──────────────────────────────────────┼─────────────┤
+│ live       │ 2026-10-04 16:03:27 │ https://supermarketpos-464da.web.app │ never       │
+└────────────┴─────────────────────┴──────────────────────────────────────┴─────────────┘
