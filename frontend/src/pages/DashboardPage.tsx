@@ -295,7 +295,7 @@ export default function DashboardPage() {
                         <div className="font-semibold text-app-heading truncate">{branch.branchName}</div>
                         <div className="mt-1 text-xs text-app-muted">{branch.transactions} transactions &middot; {branch.itemsSold} items sold</div>
                       </div>
-                      <div className="shrink-0 text-right">
+                      <div className="min-w-0 shrink-0 text-right tabular-nums [overflow-wrap:anywhere]">
                         <div className="font-bold text-app-heading">{formatCurrency(branch.totalSales)}</div>
                         <div className="mt-0.5 text-xs font-medium text-primary">Profit {formatCurrency(branch.totalProfit)}</div>
                       </div>
@@ -373,7 +373,7 @@ export default function DashboardPage() {
                       <div className="font-mono text-xs text-app-muted truncate">{sale.transactionId}</div>
                       <div className="mt-1 text-sm font-semibold text-app-heading truncate">{sale.branchName ?? 'Unassigned branch'}</div>
                     </div>
-                    <div className="shrink-0 text-right">
+                    <div className="min-w-0 shrink-0 text-right tabular-nums [overflow-wrap:anywhere]">
                       <div className="font-bold text-app-heading">{formatCurrency(sale.totalAmount)}</div>
                       <div className="mt-0.5 text-xs text-primary">Profit {formatCurrency(sale.totalProfit)}</div>
                     </div>

@@ -305,6 +305,32 @@ function AdminInventoryTable({
   onDelete: (item: InventoryItem) => void
 }) {
   return (
+    <>
+    <div className="divide-y divide-app-border md:hidden">
+      {items.length === 0 ? <p className="px-4 py-10 text-center text-app-faint">No products found</p> : items.map((item) => {
+        const status = statusFor(item)
+        return <article key={item.id} className="p-4 space-y-3">
+          <div className="flex justify-between gap-3">
+            <div className="min-w-0"><h3 className="font-semibold text-app-heading break-words">{item.productName}</h3><p className="text-xs text-app-muted">{item.branchName ?? 'Unassigned'}</p></div>
+            <span className={`h-fit shrink-0 px-2 py-1 rounded-full text-xs font-semibold ${status.cls}`}>{status.label}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg bg-app-alt p-3 text-sm">
+            <span className="text-app-muted">Buying price</span><span className="text-right font-semibold tabular-nums whitespace-nowrap">{formatCurrency(item.buyingPrice)}</span>
+            <span className="text-app-muted">Selling price</span><span className="text-right font-semibold text-primary tabular-nums whitespace-nowrap">{formatCurrency(item.sellingPrice)}</span>
+            <span className="text-app-muted">Stock</span><span className="text-right tabular-nums">{item.currentStock.toLocaleString()}</span>
+            <span className="text-app-muted">Expiry</span><span className="text-right">{formatDate(item.expiryDate)}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => onAddStock(item)} className="rounded-md bg-secondary/10 px-2 py-2 text-xs font-semibold text-secondary">Add stock</button>
+            <button onClick={() => onAdjust(item)} className="rounded-md bg-warning/10 px-2 py-2 text-xs font-semibold text-warning">Adjust stock</button>
+            <button onClick={() => onPrint(item)} className="rounded-md bg-primary/10 px-2 py-2 text-xs font-semibold text-primary">Print barcode</button>
+            <button onClick={() => onEditPrices(item)} className="rounded-md bg-primary px-2 py-2 text-xs font-bold text-white">Adjust prices</button>
+            <button onClick={() => onDelete(item)} className="col-span-2 rounded-md bg-danger px-2 py-2 text-xs font-bold text-white">Delete product</button>
+          </div>
+        </article>
+      })}
+    </div>
+    <div className="hidden md:block overflow-x-auto">
     <table className="w-full text-sm">
       <thead className="bg-app-alt text-app-muted">
         <tr>
@@ -347,7 +373,7 @@ function AdminInventoryTable({
                       Add Stock
                     </button>
                     <button onClick={() => onAdjust(item)} className="text-xs font-semibold text-warning hover:underline">
-                      Adjust
+                      Adjust stock
                     </button>
                     <button
                       onClick={() => onPrint(item)}
@@ -362,7 +388,7 @@ function AdminInventoryTable({
                       aria-label={`Edit prices for ${item.productName}`}
                     >
                       <EditIcon width={13} height={13} />
-                      Edit prices
+                      Adjust prices
                     </button>
                     <button
                       onClick={() => onDelete(item)}
@@ -381,6 +407,8 @@ function AdminInventoryTable({
         )}
       </tbody>
     </table>
+    </div>
+    </>
   )
 }
 
@@ -536,6 +564,24 @@ function CashierInventoryTable({
   onViewDetails: (item: InventoryItem) => void
 }) {
   return (
+    <>
+    <div className="divide-y divide-app-border md:hidden">
+      {items.length === 0 ? <p className="px-4 py-10 text-center text-app-faint">No products found</p> : items.map((item) => {
+        const status = statusFor(item)
+        return <button key={item.id} onClick={() => onViewDetails(item)} className="w-full p-4 text-left space-y-2 hover:bg-primary-50/40">
+          <div className="flex items-start justify-between gap-3">
+            <span className="min-w-0 font-semibold text-app-heading break-words">{item.productName}</span>
+            <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${status.cls}`}>{status.label}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-app-muted">Selling price</span>
+            <span className="text-right font-bold text-primary tabular-nums [overflow-wrap:anywhere]">{formatCurrency(item.sellingPrice)}</span>
+          </div>
+          <div className="text-right text-xs font-semibold text-primary">Details &rarr;</div>
+        </button>
+      })}
+    </div>
+    <div className="hidden md:block overflow-x-auto">
     <table className="w-full text-sm">
       <thead className="bg-app-alt text-app-muted">
         <tr>
@@ -573,6 +619,8 @@ function CashierInventoryTable({
         )}
       </tbody>
     </table>
+    </div>
+    </>
   )
 }
 

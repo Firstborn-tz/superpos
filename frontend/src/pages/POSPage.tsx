@@ -316,7 +316,7 @@ export default function POSPage() {
                       className="relative text-left border border-app-border rounded-lg p-3 hover:border-primary hover:shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <div className="font-semibold text-sm text-app-heading truncate">{p.productName}</div>
-                      <div className="text-primary font-bold text-sm mt-1">{formatCurrency(p.sellingPrice)}</div>
+                      <div className="text-primary font-bold text-sm mt-1 tabular-nums [overflow-wrap:anywhere]">{formatCurrency(p.sellingPrice)}</div>
                       <div className="text-xs text-app-faint mt-1">
                         {expired ? 'Expired' : outOfStock ? 'Out of stock' : `${p.currentStock} in stock`}
                       </div>
@@ -405,7 +405,7 @@ export default function POSPage() {
                         <PlusIcon width={14} height={14} />
                       </button>
                     </div>
-                    <span className="font-bold text-sm text-app-heading">{formatCurrency(item.totalPrice)}</span>
+                    <span className="font-bold text-sm text-app-heading text-right tabular-nums [overflow-wrap:anywhere]">{formatCurrency(item.totalPrice)}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-2 pt-2 border-t border-app-border">
                     <label className="text-xs text-app-faint">Discount</label>
@@ -436,11 +436,11 @@ export default function POSPage() {
                 </div>
               </>
             )}
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-3">
               <span className="text-app-muted font-medium">Total</span>
               <span
                 key={cart.getTotal()}
-                className="text-3xl font-bold text-primary inline-block animate-[totalBump_0.3s_ease-out]"
+                className="text-xl sm:text-3xl font-bold text-primary text-right tabular-nums [overflow-wrap:anywhere] inline-block animate-[totalBump_0.3s_ease-out]"
               >
                 {formatCurrency(cart.getTotal())}
               </span>
