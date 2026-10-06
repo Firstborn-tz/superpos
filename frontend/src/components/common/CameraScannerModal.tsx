@@ -33,6 +33,12 @@ export default function CameraScannerModal({ open, onClose, onDetected }: Camera
 
     async function start() {
       try {
+        if (!window.isSecureContext) {
+          setStarting(false)
+          setError('Camera scanning requires a secure connection. Open this page over HTTPS, or use localhost while testing.')
+          return
+        }
+
         const { BrowserMultiFormatReader } = await import('@zxing/browser')
         const reader = new BrowserMultiFormatReader()
         if (cancelled || !videoRef.current) return
@@ -62,16 +68,18 @@ export default function CameraScannerModal({ open, onClose, onDetected }: Camera
             void err
           },
         )
-        controlsRef.current = controls
-        if (!cancelled) {
-          setStarting(false)
-          setHint('Hold the barcode inside the frame. Use good lighting and move closer if needed.')
-          hintTimer = setTimeout(() => {
-            if (!detectedRef.current) {
-              setHint('Still scanning. Keep the barcode steady, avoid glare, and try moving closer.')
-            }
-          }, 10_000)
+        if (cancelled) {
+          controls.stop()
+          return
         }
+        controlsRef.current = controls
+        setStarting(false)
+        setHint('Hold the barcode inside the frame. Use good lighting and move closer if needed.')
+        hintTimer = setTimeout(() => {
+          if (!detectedRef.current) {
+            setHint('Still scanning. Keep the barcode steady, avoid glare, and try moving closer.')
+          }
+        }, 10_000)
       } catch (err) {
         if (cancelled) return
         console.error('Camera scanner failed to start:', err)
@@ -80,6 +88,8 @@ export default function CameraScannerModal({ open, onClose, onDetected }: Camera
           setError('Camera access was denied. Allow camera permission for this site and try again.')
         } else if (err instanceof DOMException && err.name === 'NotFoundError') {
           setError('No camera found on this device.')
+        } else if (err instanceof DOMException && err.name === 'NotReadableError') {
+          setError('The camera is busy in another app. Close other camera apps and try again.')
         } else {
           setError('Could not start the camera. Try again, or enter the barcode manually.')
         }

@@ -252,10 +252,10 @@ export default function POSPage() {
 
   return (
     <DashboardLayout title="Point of Sale">
-      <div className="grid lg:grid-cols-[1fr_380px] gap-5 h-full">
+      <div className="grid lg:grid-cols-[1fr_380px] gap-4 lg:gap-5 lg:h-full">
         {/* Left: scan + products */}
-        <div className="space-y-4 min-w-0">
-          <form onSubmit={handleBarcodeSubmit} className="bg-app-card rounded-card shadow-card p-4 flex gap-2">
+        <div className="space-y-4 min-w-0 order-2 lg:order-1">
+          <form onSubmit={handleBarcodeSubmit} className="bg-app-card rounded-card shadow-card p-3 sm:p-4 flex gap-2">
             <input
               ref={barcodeRef}
               defaultValue=""
@@ -276,10 +276,11 @@ export default function POSPage() {
               <button
                 type="button"
                 onClick={() => setShowCameraScanner(true)}
-                className="px-4 py-3 bg-secondary hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition-colors flex items-center gap-2"
+                className="px-3 sm:px-4 py-3 bg-secondary hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2 shrink-0"
                 aria-label="Scan with camera"
               >
                 <CameraIcon width={18} height={18} />
+                <span className="hidden sm:inline">Scan</span>
               </button>
             )}
           </form>
@@ -291,7 +292,7 @@ export default function POSPage() {
             </div>
           )}
 
-          <div className="bg-app-card rounded-card shadow-card p-4">
+          <div className="bg-app-card rounded-card shadow-card p-3 sm:p-4">
             <div className="relative mb-4">
               <SearchIcon width={16} height={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-app-faint" />
               <input
@@ -301,7 +302,7 @@ export default function POSPage() {
                 className="w-full pl-9 pr-3 py-2.5 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[55vh] overflow-y-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[38vh] lg:max-h-[55vh] overflow-y-auto overscroll-contain">
               {filteredProducts.length === 0 ? (
                 <p className="col-span-full text-center text-app-faint py-8 text-sm">No products found</p>
               ) : (
@@ -358,16 +359,19 @@ export default function POSPage() {
         </div>
 
         {/* Right: cart */}
-        <div className="bg-app-card rounded-card shadow-card flex flex-col overflow-hidden">
-          <div className="px-5 py-4 border-b border-app-border flex items-center justify-between">
-            <h2 className="font-bold text-app-heading">Cart ({cart.getItemCount()})</h2>
+        <div className="bg-app-card rounded-card shadow-card flex flex-col overflow-hidden order-1 lg:order-2 lg:min-h-0 lg:h-full">
+          <div className="px-4 sm:px-5 py-4 border-b border-app-border flex items-center justify-between bg-app-alt/60">
+            <div>
+              <h2 className="font-bold text-app-heading">Your cart <span className="text-primary">({cart.getItemCount()})</span></h2>
+              <p className="text-xs text-app-faint mt-0.5">Review items before checkout</p>
+            </div>
             {cart.items.length > 0 && (
               <button onClick={handleHoldSale} className="text-xs font-semibold text-secondary hover:underline">
                 Hold sale
               </button>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[200px]">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 min-h-[100px] max-h-[32vh] lg:max-h-none lg:min-h-[200px] overscroll-contain">
             {cart.items.length === 0 ? (
               <p className="text-center text-app-faint text-sm py-10">Cart is empty. Scan a product to begin.</p>
             ) : (
@@ -423,7 +427,7 @@ export default function POSPage() {
               ))
             )}
           </div>
-          <div className="border-t border-app-border p-5 space-y-2">
+          <div className="border-t border-app-border p-4 sm:p-5 space-y-2 bg-app-card">
             {cart.getDiscountAmount() > 0 && (
               <>
                 <div className="flex justify-between text-sm text-app-muted">
