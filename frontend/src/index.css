@@ -89,6 +89,12 @@ button {
   font-family: inherit;
 }
 
+.product-scanner video {
+  width: 100%;
+  height: 16rem;
+  object-fit: cover;
+}
+
 /* Prevent iOS zoom-on-focus for inputs under 16px */
 @media (max-width: 768px) {
   input,
