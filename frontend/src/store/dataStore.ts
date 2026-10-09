@@ -3,6 +3,7 @@ import type { ActivityLogEntry, Branch, BranchExpenseRecord, BranchSyncStatus, I
 import { STORAGE_KEYS, readStorage, writeStorage } from '@/utils/storage'
 import { pullAllFromFirestore, pullCashierRecords, pullPublicBranches, pullPublicOperationalData } from '@/services/firebase/firestoreService'
 import { useAuthStore } from '@/store/authStore'
+import { syncService } from '@/services/sync/syncService'
 
 const REFUNDS_KEY = 'superpos_refunds'
 const ADJUSTMENTS_KEY = 'superpos_stock_adjustments'
@@ -91,6 +92,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         const publicBranches = await pullPublicBranches()
         set({ branches: publicBranches.map((branch) => ({ ...branch, password: '' })) })
         writeStorage(STORAGE_KEYS.BRANCHES, publicBranches.map((branch) => ({ ...branch, password: '' })))
+        syncService.reportDatabaseRefresh()
         return
       }
       if (!isAdmin) {
@@ -112,6 +114,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         writeStorage(STORAGE_KEYS.SALES, sales)
         writeStorage(REFUNDS_KEY, refunds)
         writeStorage(EXPENSES_KEY, branchExpenses)
+        syncService.reportDatabaseRefresh()
         return
       }
 
@@ -132,8 +135,10 @@ export const useDataStore = create<DataState>((set, get) => ({
       writeStorage(ADJUSTMENTS_KEY, stockAdjustments)
       writeStorage(EXPENSES_KEY, branchExpenses)
       writeStorage(ACTIVITY_LOG_KEY, activityLog)
+      syncService.reportDatabaseRefresh()
     } catch (err) {
       console.error('Failed to refresh from server', err)
+      syncService.reportDatabaseRefresh(err)
     }
   },
 

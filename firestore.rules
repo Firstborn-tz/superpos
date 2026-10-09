@@ -3,98 +3,132 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
+    function signedIn() {
       return request.auth != null;
     }
 
-    // Both roles use Firebase Auth. Role and branch access are stored in
-    // admin membership and cashier-to-branch mapping documents.
     function isAdmin() {
-      return isSignedIn()
+      return signedIn()
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
         && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin';
     }
 
     function isCashier() {
-      return isSignedIn()
+      return signedIn()
         && exists(/databases/$(database)/documents/cashier_access/$(request.auth.uid))
-        && get(/databases/$(database)/documents/cashier_access/$(request.auth.uid)).data.role == 'cashier';
+        && get(/databases/$(database)/documents/cashier_access/$(request.auth.uid)).data.role == 'cashier'
+        && get(/databases/$(database)/documents/cashier_access/$(request.auth.uid)).data.branchId is string;
     }
 
     function cashierBranchId() {
       return get(/databases/$(database)/documents/cashier_access/$(request.auth.uid)).data.branchId;
     }
 
-    function isValidInventoryWrite() {
-      let d = request.resource.data;
-      return d.keys().hasAll(['id', 'barcode', 'productName', 'buyingPrice', 'sellingPrice', 'currentStock'])
-        && d.id is string
-        && d.buyingPrice is number && d.buyingPrice >= 0
-        && d.sellingPrice is number && d.sellingPrice >= 0
-        && d.currentStock is number;
+    function validInventory(data, itemId) {
+      return data.id == itemId
+        && data.barcode is string
+        && data.productName is string
+        && data.productName.size() > 0
+        && data.buyingPrice is number && data.buyingPrice >= 0
+        && data.sellingPrice is number && data.sellingPrice >= 0
+        && data.currentStock is number && data.currentStock >= 0
+        && data.initialStock is number && data.initialStock >= 0
+        && data.createdAt is string;
     }
 
-    function isValidSaleWrite() {
-      let d = request.resource.data;
-      return d.keys().hasAll(['id', 'transactionId', 'items', 'totalAmount', 'createdAt'])
-        && d.id is string
-        && d.totalAmount is number && d.totalAmount >= 0;
+    function validSale(data, saleId) {
+      return data.id == saleId
+        && data.transactionId is string
+        && data.items is list
+        && data.subtotal is number && data.subtotal >= 0
+        && data.discountAmount is number && data.discountAmount >= 0
+        && data.totalAmount is number && data.totalAmount >= 0
+        && data.createdAt is string
+        && data.cashierName is string
+        && data.branchId is string;
     }
 
+    function validRefund(data, refundId) {
+      return data.id == refundId
+        && data.originalSaleId is string
+        && data.originalTransactionId is string
+        && data.items is list
+        && data.totalRefunded is number && data.totalRefunded > 0
+        && data.createdAt is string
+        && data.cashierName is string
+        && data.branchId is string;
+    }
+
+    // Access-control documents are provisioned by an administrator in the
+    // Firebase Console or trusted Admin SDK. Clients cannot grant roles.
     match /admins/{uid} {
-      allow read: if isSignedIn() && request.auth.uid == uid;
-      allow write: if isAdmin();
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
     }
 
-    // A branch account is provisioned in Firebase Auth and mapped to its
-    // branch by an admin. Cashiers may inspect only their own mapping.
     match /cashier_access/{uid} {
-      allow read: if isSignedIn() && request.auth.uid == uid;
-      allow write: if isAdmin();
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
     }
 
-    // Branch documents contain password hashes. Public branch data is
-    // served from public_branches instead.
+    // Private branch records include password hashes. Cashiers can update
+    // only the password hash on their own branch from Settings.
     match /branches/{branchId} {
       allow read: if isAdmin();
       allow create, delete: if isAdmin();
-      // Admins can update branch records. A cashier may change only the
-      // password field on their assigned branch record.
       allow update: if isAdmin()
-        || (isCashier() && cashierBranchId() == branchId
+        || (isCashier()
+          && cashierBranchId() == branchId
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['password']));
     }
 
-    // This is the credential-free projection used by the public landing
-    // page. Only Firebase-authenticated administrators may change it.
+    // Cashier sign-in resolves the familiar branch name through this
+    // credential-free public projection. Never put passwords or hashes here.
     match /public_branches/{branchId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
+    // Inventory is shared for reads so the POS can load the product catalog.
+    // Cashiers can create products for their own branch and adjust stock
+    // fields only; prices and product identity remain admin-controlled.
     match /inventory/{itemId} {
       allow read: if isAdmin() || isCashier();
-      allow create, update: if (isAdmin() || isCashier())
-        && request.resource.data.id == itemId
-        && isValidInventoryWrite();
+      allow create: if validInventory(request.resource.data, itemId)
+        && (isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId()));
+      allow update: if isAdmin()
+        || (isCashier()
+          && resource.data.branchId == cashierBranchId()
+          && validInventory(request.resource.data, itemId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'currentStock', 'initialStock', 'buyingPrice', 'expiryDate', 'batchNumber',
+            'batches', 'hasExpiredBatches', 'expiredQuantity', 'updatedAt'
+          ]));
       allow delete: if isAdmin();
     }
 
     match /sales/{saleId} {
       allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
-      allow create: if request.resource.data.id == saleId && isValidSaleWrite()
+      allow create: if validSale(request.resource.data, saleId)
         && (isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId()));
-      // Cashiers need to flag a sale as refunded from the Refunds page,
-      // so update is allowed with the same shape validation as create -
-      // full audit trail lives in the separate /refunds collection.
-      allow update: if request.resource.data.id == saleId && isValidSaleWrite()
-        && (isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId() && request.resource.data.branchId == cashierBranchId()));
+      // A cashier may only mark an existing sale as refunded and increase
+      // its cumulative refunded amount. Refund details are immutable records
+      // in /refunds. Exact duplicate retries have no changed fields.
+      allow update: if isAdmin()
+        || (isCashier()
+          && resource.data.branchId == cashierBranchId()
+          && validSale(request.resource.data, saleId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['refunded', 'refundedAmount'])
+          && request.resource.data.refunded == true
+          && request.resource.data.get('refundedAmount', 0) is number
+          && request.resource.data.get('refundedAmount', 0) >= resource.data.get('refundedAmount', 0)
+          && request.resource.data.get('refundedAmount', 0) <= resource.data.totalAmount);
       allow delete: if isAdmin();
     }
 
     match /refunds/{refundId} {
       allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
-      allow create: if request.resource.data.id == refundId
+      allow create: if validRefund(request.resource.data, refundId)
         && (isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId()));
       allow update: if isAdmin() || (isCashier()
         && resource.data.branchId == cashierBranchId()
@@ -105,6 +139,13 @@ service cloud.firestore {
     match /stock_adjustments/{adjustmentId} {
       allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
       allow create: if request.resource.data.id == adjustmentId
+        && request.resource.data.inventoryId is string
+        && request.resource.data.productName is string
+        && request.resource.data.quantityChange is number
+        && request.resource.data.reason is string
+        && request.resource.data.createdAt is string
+        && request.resource.data.performedBy is string
+        && request.resource.data.branchId is string
         && (isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId()));
       allow update: if isAdmin() || (isCashier()
         && resource.data.branchId == cashierBranchId()
@@ -112,26 +153,21 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Cashiers may create expenses for their assigned branch; admins can
-    // review and manage all branch records.
     match /branch_expenses/{expenseId} {
       allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
-      allow create: if isCashier() && request.resource.data.branchId == cashierBranchId()
-        && request.resource.data.keys().hasAll([
-          'id', 'name', 'amount', 'createdAt', 'recordedBy', 'branchId'
-        ])
+      allow create: if isCashier()
         && request.resource.data.id == expenseId
+        && request.resource.data.branchId == cashierBranchId()
+        && request.resource.data.keys().hasAll(['id', 'name', 'amount', 'createdAt', 'recordedBy', 'branchId'])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 160
         && request.resource.data.amount is number
         && request.resource.data.amount > 0
         && request.resource.data.createdAt is string
-        && request.resource.data.recordedBy is string
-        && request.resource.data.branchId is string;
-      // An acknowledged-but-interrupted write can be retried against an
-      // existing document. Allow only an identical cashier retry so records
-      // remain immutable after creation.
+        && request.resource.data.recordedBy is string;
+      // Allow only exact retries for cashier records; admins can correct or
+      // remove an expense when needed.
       allow update: if isAdmin() || (isCashier()
         && resource.data.branchId == cashierBranchId()
         && request.resource.data == resource.data);
@@ -141,39 +177,38 @@ service cloud.firestore {
     match /activity_log/{entryId} {
       allow read: if isAdmin();
       allow create: if request.resource.data.id == entryId
+        && request.resource.data.action is string
+        && request.resource.data.description is string
+        && request.resource.data.performedBy is string
+        && request.resource.data.createdAt is string
         && (isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId()));
-      // Sync retries use the same document ID. Permit a duplicate no-op write
-      // after a previous create reached Firestore, without allowing anyone
-      // other than admins to modify or remove the audit record.
       allow update: if isAdmin() || (isCashier()
         && resource.data.branchId == cashierBranchId()
         && request.resource.data == resource.data);
       allow delete: if isAdmin();
     }
 
-    // A branch device records the time at which one of its operational
-    // writes reached Firestore. The admin dashboard uses this for a clear
-    // per-branch database-sync indicator.
     match /branch_sync/{branchId} {
       allow read: if isAdmin();
-      allow create, update: if (isAdmin() || (isCashier() && cashierBranchId() == branchId))
-        && request.resource.data.branchId == branchId
-        && request.resource.data.lastSyncedAt is string;
+      allow create, update: if request.resource.data.branchId == branchId
+        && request.resource.data.lastSyncedAt is string
+        && request.resource.data.lastOperation is string
+        && (isAdmin() || (isCashier() && cashierBranchId() == branchId));
       allow delete: if isAdmin();
     }
 
-    // Cashiers can access only their own branch conversation. Admins can
-    // access all branch conversations. Exact duplicate updates are permitted
-    // only so a retried queued message remains idempotent.
     match /chat_messages/{messageId} {
       allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
       allow create: if request.resource.data.id == messageId
         && request.resource.data.branchId is string
+        && request.resource.data.senderName is string
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 4000
+        && request.resource.data.createdAt is string
         && ((isAdmin() && request.resource.data.senderRole == 'admin')
-          || (isCashier() && request.resource.data.senderRole == 'cashier'
+          || (isCashier()
+            && request.resource.data.senderRole == 'cashier'
             && request.resource.data.branchId == cashierBranchId()));
       allow update: if isAdmin() || (isCashier()
         && resource.data.branchId == cashierBranchId()
@@ -181,9 +216,12 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // App preferences are currently local-only, but if a client uses this
+    // collection, keep it private to authenticated administrators.
     match /settings/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
+
+    // Any collection not explicitly listed above is denied by default.
   }
 }

@@ -41,6 +41,7 @@ class SyncService {
     pendingCount: this.getPendingOperations().length,
     lastSyncedAt: readStorage<string | null>('superpos_last_synced', null),
     lastError: null,
+    refreshError: null,
   }
 
   constructor() {
@@ -214,10 +215,12 @@ class SyncService {
     const initialOperationIds = new Set(allPending.map((op) => op.id))
     const processingOperationIds = new Set(pending.map((op) => op.id))
     let lastError: string | null = null
+    let successfulWrites = 0
 
     for (const op of pending) {
       try {
         await this.processOperation(op)
+        successfulWrites += 1
         if (op.type === 'SALE') this.rememberSyncedSale((op.payload as SaleRecord).id)
         // Branch sync status is informative only. A missing/deferred rule for
         // that status document must never keep a successfully written sale in
@@ -249,13 +252,14 @@ class SyncService {
     const nextPending = [...remaining, ...waitingOperations, ...addedWhileSyncing]
     this.setPendingOperations(nextPending)
     const stillWaitingForOtherAccount = nextPending.some((op) => Boolean(op.authUid && op.authUid !== currentUid))
+    const syncedAt = successfulWrites > 0 ? new Date().toISOString() : this.status.lastSyncedAt
     this.updateStatus({
       isSyncing: false,
       lastError,
-      lastSyncedAt: new Date().toISOString(),
+      lastSyncedAt: syncedAt,
       waitingForOtherAccount: stillWaitingForOtherAccount,
     })
-    writeStorage('superpos_last_synced', new Date().toISOString())
+    if (successfulWrites > 0) writeStorage('superpos_last_synced', syncedAt)
 
     // The callers that added these operations already tried to sync while
     // this batch was active. Start a fresh batch now that it is safe.
@@ -264,6 +268,13 @@ class SyncService {
 
   getStatus(): SyncStatus {
     return this.status
+  }
+
+  reportDatabaseRefresh(error?: unknown) {
+    const refreshError = error
+      ? (error instanceof Error ? error.message : 'Could not read the latest records from the database')
+      : null
+    this.updateStatus({ refreshError })
   }
 }
 

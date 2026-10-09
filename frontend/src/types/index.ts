@@ -230,6 +230,7 @@ export interface SyncStatus {
   pendingCount: number
   lastSyncedAt: string | null
   lastError: string | null
+  refreshError?: string | null
   waitingForOtherAccount?: boolean
 }
 
