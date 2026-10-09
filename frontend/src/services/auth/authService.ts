@@ -120,7 +120,7 @@ export async function loginCashier(branchName: string, password: string): Promis
     if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
       return {
         ok: false,
-        message: `The branch was found, but its Firebase cashier account could not sign in. Create ${cashierLoginEmail ?? 'the branch cashier account'} in Firebase Authentication with the branch password, or reset that account's password.`,
+        message: 'The branch was found, but its saved branch name and password are not connected to a Firebase cashier account yet. Ask the administrator to finish the one-time cashier account setup. Cashiers should continue using only the branch name and branch password here.',
       }
     }
     if (code === 'auth/operation-not-allowed') return { ok: false, message: 'Enable Email/Password sign-in in Firebase Console > Authentication > Sign-in method.' }
