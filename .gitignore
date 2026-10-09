@@ -2,4 +2,5 @@
 .env*
 
 .firebase/
+node_modules/
 *.tsbuildinfo

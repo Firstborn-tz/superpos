@@ -8,7 +8,6 @@ import { useDataStore } from '@/store/dataStore'
 import { syncService } from '@/services/sync/syncService'
 import { logActivity } from '@/services/activity/activityService'
 import { reauthenticateAdmin } from '@/services/auth/reauthService'
-import { changeBranchPassword } from '@/services/auth/authService'
 import { toast } from '@/store/toastStore'
 import type { Branch, InventoryItem } from '@/types'
 import { formatCurrency, formatDate, formatDateTime, generateBranchCode, generateId } from '@/utils/helpers'
@@ -23,7 +22,6 @@ export default function BranchesPage() {
   const [viewBranch, setViewBranch] = useState<Branch | null>(null)
   const [renameBranch, setRenameBranch] = useState<Branch | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null)
-  const [passwordResetTarget, setPasswordResetTarget] = useState<Branch | null>(null)
 
   async function handleAddBranch(data: { name: string; password: string; address: string; phone: string }) {
     const hashed = await hashPassword(data.password)
@@ -59,14 +57,6 @@ export default function BranchesPage() {
     logActivity('DELETE_BRANCH', `Deleted branch "${branch.name}" (admin password verified)`, user)
     toast.success('Branch deleted')
     setDeleteTarget(null)
-  }
-
-  async function handlePasswordReset(branch: Branch, newPassword: string) {
-    const updated = await changeBranchPassword(branch, newPassword)
-    upsertBranch(updated)
-    logActivity('PASSWORD_CHANGE', `Admin reset the cashier password for "${branch.name}"`, user)
-    toast.success(`Password reset for ${branch.name}`)
-    setPasswordResetTarget(null)
   }
 
   return (
@@ -107,7 +97,7 @@ export default function BranchesPage() {
                         <EditIcon width={16} height={16} />
                       </button>
                       <button
-                        onClick={() => setPasswordResetTarget(b)}
+                        onClick={() => toast.error('Reset this branch password in Firebase Authentication Console, then give the cashier the new password.')}
                         className="p-1 text-app-faint hover:text-primary"
                         aria-label="Reset branch password"
                         title="Reset cashier password"
@@ -155,12 +145,6 @@ export default function BranchesPage() {
       <RenameBranchModal branch={renameBranch} onClose={() => setRenameBranch(null)} onSubmit={handleRename} />
 
       <DeleteBranchModal branch={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDeleteConfirmed} />
-
-      <ResetBranchPasswordModal
-        branch={passwordResetTarget}
-        onClose={() => setPasswordResetTarget(null)}
-        onSubmit={handlePasswordReset}
-      />
 
       <BranchProductsModal
         branch={viewBranch}

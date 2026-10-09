@@ -137,6 +137,7 @@ export default function App() {
   const refreshFromServer = useDataStore((s) => s.refreshFromServer)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const userRole = useAuthStore((s) => s.user?.role)
+  const logout = useAuthStore((s) => s.logout)
 
   useEffect(() => {
     // Cached records are only an offline fallback for cashier workflows.
@@ -182,6 +183,16 @@ export default function App() {
       if (firebaseUser) void refreshFromServer()
     })
   }, [userRole, refreshFromServer])
+
+  // Old branch-password sessions have no Firebase identity and therefore
+  // cannot use the branch-scoped transaction history rules. Require a
+  // fresh cashier sign-in after upgrading to Firebase cashier accounts.
+  useEffect(() => {
+    if (!isAuthenticated || userRole !== 'cashier') return
+    return onAuthStateChanged(auth, (firebaseUser) => {
+      if (!firebaseUser) logout()
+    })
+  }, [isAuthenticated, userRole, logout])
 
   return (
     <BrowserRouter>

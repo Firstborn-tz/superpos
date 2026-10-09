@@ -39,6 +39,7 @@ export default function SettingsPage() {
 
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
   const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [pwLoading, setPwLoading] = useState(false)
 
@@ -84,13 +85,19 @@ export default function SettingsPage() {
         setPwMessage({ type: 'error', text: 'Branch record not found.' })
         return
       }
-      const updated = await changeBranchPassword(branch, newPassword)
-      upsertBranch(updated)
-      setPwLoading(false)
-      setPwMessage({ type: 'success', text: 'Branch password updated successfully.' })
-      logActivity('PASSWORD_CHANGE', `Branch password changed for "${branch.name}"`, user)
-      setNewPassword('')
-      setConfirmPassword('')
+      try {
+        const updated = await changeBranchPassword(branch, newPassword, currentPassword)
+        upsertBranch(updated)
+        setPwMessage({ type: 'success', text: 'Branch password updated successfully.' })
+        logActivity('PASSWORD_CHANGE', `Branch password changed for "${branch.name}"`, user)
+        setNewPassword('')
+        setConfirmPassword('')
+        setCurrentPassword('')
+      } catch (err) {
+        setPwMessage({ type: 'error', text: err instanceof Error ? err.message : 'Could not update password.' })
+      } finally {
+        setPwLoading(false)
+      }
     }
   }
 
@@ -194,6 +201,10 @@ export default function SettingsPage() {
                 {pwMessage.text}
               </div>
             )}
+            {user?.role === 'cashier' && <div>
+              <label className="block text-sm font-medium text-app-body mb-1">Current Branch Password</label>
+              <input type="password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full px-3.5 py-2.5 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>}
             <div>
               <label className="block text-sm font-medium text-app-body mb-1">New Password</label>
               <input

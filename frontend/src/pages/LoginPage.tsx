@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useDataStore } from '@/store/dataStore'
-import { loginAdmin, loginBranch, sendAdminPasswordReset } from '@/services/auth/authService'
+import { loginAdmin, loginCashier, sendAdminPasswordReset } from '@/services/auth/authService'
 import { logActivity } from '@/services/activity/activityService'
 import { useTranslation } from '@/store/languageStore'
 import Loader from '@/components/common/Loader'
@@ -13,14 +13,12 @@ type Tab = 'admin' | 'branch'
 export default function LoginPage() {
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
-  const branches = useDataStore((s) => s.branches)
   const t = useTranslation()
 
   const [tab, setTab] = useState<Tab>('admin')
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [branchName, setBranchName] = useState('')
-  const [branchPassword, setBranchPassword] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -48,7 +46,7 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const result = await loginBranch(branchName.trim(), branchPassword, branches)
+    const result = await loginCashier(branchName, password)
     setLoading(false)
     if (result.ok && result.user && result.token) {
       setAuth(result.user, result.token)
@@ -229,13 +227,13 @@ export default function LoginPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-app-body mb-1">{t('login_branch_password')}</label>
+                  <label className="block text-sm font-medium text-app-body mb-1">{t('login_password')}</label>
                   <input
                     type="password"
                     required
-                    value={branchPassword}
-                    onChange={(e) => setBranchPassword(e.target.value)}
-                    placeholder="Enter branch password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={t('login_branch_password')}
                     className="w-full px-3.5 py-2.5 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   />
                 </div>
@@ -246,13 +244,8 @@ export default function LoginPage() {
                 >
                   {loading ? <><Loader size="small" label="Signing in" /> Signing in...</> : <><UserIcon width={16} height={16} />{t('login_signin_cashier')}</>}
                 </button>
-                {branches.length === 0 && (
-                  <p className="text-xs text-app-faint text-center">
-                    No branch found!. Connect your device to the internet to sync branch data.
-                  </p>
-                )}
                 <p className="text-xs text-app-faint text-center">
-                  Forgot your branch password? Ask your administrator!.
+                  Sign in with your branch name and branch password.
                 </p>
               </form>
             )}

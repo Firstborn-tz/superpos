@@ -3,6 +3,8 @@ import type { ReactElement } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { useTranslation } from '@/store/languageStore'
 import { logActivity } from '@/services/activity/activityService'
+import { auth } from '@/config/firebase'
+import { signOut } from 'firebase/auth'
 import {
   DashboardIcon,
   POSIcon,
@@ -67,6 +69,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
   function handleLogout() {
     logActivity('LOGOUT', `${currentUser.role === 'admin' ? 'Admin' : 'Cashier'} logged out`, currentUser)
+    void signOut(auth)
     logout()
     navigate('/login')
   }

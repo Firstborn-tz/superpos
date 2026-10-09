@@ -3,6 +3,7 @@ import {
   doc,
   getDocs,
   getDocsFromServer,
+  getDoc,
   setDoc,
   deleteDoc,
   query,
@@ -78,12 +79,25 @@ export async function pullAllFromFirestore(): Promise<{
 export async function pullPublicOperationalData(): Promise<Pick<Awaited<ReturnType<typeof pullAllFromFirestore>>, 'inventory' | 'branches'>> {
   const [invSnap, branchSnap] = await Promise.all([
     getDocs(query(collection(db, COLLECTIONS.INVENTORY), orderBy('createdAt', 'desc'))),
-    getDocs(query(collection(db, COLLECTIONS.BRANCHES), orderBy('createdAt', 'desc'))),
+    getDocs(query(collection(db, COLLECTIONS.PUBLIC_BRANCHES), orderBy('createdAt', 'desc'))),
   ])
 
   return {
     inventory: invSnap.docs.map((d) => d.data() as InventoryItem),
-    branches: branchSnap.docs.map((d) => d.data() as Branch),
+    branches: branchSnap.docs.map((d) => ({ ...d.data(), password: '' }) as Branch),
+  }
+}
+
+export async function pullCashierRecords(branchId: string): Promise<Pick<Awaited<ReturnType<typeof pullAllFromFirestore>>, 'sales' | 'refunds' | 'branchExpenses'>> {
+  const [salesSnap, refundSnap, expenseSnap] = await Promise.all([
+    getDocsFromServer(query(collection(db, COLLECTIONS.SALES), where('branchId', '==', branchId), orderBy('createdAt', 'desc'))),
+    getDocsFromServer(query(collection(db, COLLECTIONS.REFUNDS), where('branchId', '==', branchId), orderBy('createdAt', 'desc'))),
+    getDocsFromServer(query(collection(db, COLLECTIONS.BRANCH_EXPENSES), where('branchId', '==', branchId), orderBy('createdAt', 'desc'))),
+  ])
+  return {
+    sales: salesSnap.docs.map((d) => d.data() as SaleRecord),
+    refunds: refundSnap.docs.map((d) => d.data() as RefundRecord),
+    branchExpenses: expenseSnap.docs.map((d) => d.data() as BranchExpenseRecord),
   }
 }
 
@@ -131,9 +145,12 @@ export async function pushBranch(branch: Branch): Promise<void> {
   void password
   const branchWrite = setDoc(doc(db, COLLECTIONS.BRANCHES, branch.id), branch, { merge: true })
 
-  // Cashiers may change only their branch password under the current rules;
-  // the public projection deliberately does not contain that field.
-  if (!auth.currentUser) {
+  const adminAccess = auth.currentUser
+    ? await getDoc(doc(db, COLLECTIONS.ADMINS, auth.currentUser.uid))
+    : null
+  // Cashier password updates may change the private branch document only.
+  // The public projection deliberately excludes credentials and is admin-only.
+  if (!adminAccess?.exists() || adminAccess.data()?.role !== 'admin') {
     await branchWrite
     return
   }

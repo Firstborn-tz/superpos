@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import Modal from '@/components/common/Modal'
 import { useAuthStore } from '@/store/authStore'
@@ -39,9 +39,18 @@ export default function RefundsPage() {
   }, [scopedSales, query])
 
   const recentRefunds = useMemo(
-    () => refunds.filter((r) => user?.role === 'admin' || r.branchId === user?.branchId).slice(0, 10),
+    () => refunds.filter((r) => user?.role === 'admin' || r.branchId === user?.branchId),
     [refunds, user],
   )
+
+  const previousRefundedQuantities = useMemo(() => {
+    const totals: Record<string, number> = {}
+    if (!activeSale) return totals
+    refunds.filter((refund) => refund.originalSaleId === activeSale.id).forEach((refund) => {
+      refund.items.forEach((item) => { totals[item.inventoryId] = (totals[item.inventoryId] ?? 0) + item.quantity })
+    })
+    return totals
+  }, [refunds, activeSale])
 
   function handleRefundSubmit(payload: {
     sale: SaleRecord
@@ -50,7 +59,21 @@ export default function RefundsPage() {
     note: string
     restockItems: boolean
   }) {
-    const totalRefunded = payload.items.reduce((sum, i) => sum + i.totalPrice, 0)
+    const priorRefunds = refunds.filter((refund) => refund.originalSaleId === payload.sale.id)
+    const refundedQuantity: Record<string, number> = {}
+    priorRefunds.forEach((refund) => refund.items.forEach((item) => {
+      refundedQuantity[item.inventoryId] = (refundedQuantity[item.inventoryId] ?? 0) + item.quantity
+    }))
+    const itemsAreValid = payload.items.every((item) => {
+      const soldItem = payload.sale.items.find((sold) => sold.inventoryId === item.inventoryId)
+      return !!soldItem && Number.isInteger(item.quantity) && item.quantity > 0
+        && (refundedQuantity[item.inventoryId] ?? 0) + item.quantity <= soldItem.quantity
+    })
+    const totalRefunded = Math.round(payload.items.reduce((sum, i) => sum + i.totalPrice, 0) * 100) / 100
+    if (!itemsAreValid || totalRefunded <= 0 || (payload.sale.refundedAmount ?? 0) + totalRefunded > payload.sale.totalAmount + 0.01) {
+      toast.error('This refund exceeds the remaining refundable items or amount. Refresh the transaction and try again.')
+      return
+    }
 
     const refund: RefundRecord = {
       id: generateId('refund'),
@@ -75,7 +98,7 @@ export default function RefundsPage() {
     const updatedSale: SaleRecord = {
       ...payload.sale,
       refunded: true,
-      refundedAmount: alreadyRefunded + totalRefunded,
+      refundedAmount: Math.min(payload.sale.totalAmount, Math.round((alreadyRefunded + totalRefunded) * 100) / 100),
     }
     updateSale(updatedSale)
     syncService.addPendingOperation('SALE', updatedSale)
@@ -183,23 +206,32 @@ export default function RefundsPage() {
         </div>
       </div>
 
-      <RefundModal sale={activeSale} onClose={() => setActiveSale(null)} onSubmit={handleRefundSubmit} />
+      <RefundModal sale={activeSale} previouslyRefunded={previousRefundedQuantities} onClose={() => setActiveSale(null)} onSubmit={handleRefundSubmit} />
     </DashboardLayout>
   )
 }
 
 interface RefundModalProps {
   sale: SaleRecord | null
+  previouslyRefunded: Record<string, number>
   onClose: () => void
   onSubmit: (payload: { sale: SaleRecord; items: RefundItem[]; reason: RefundReason; note: string; restockItems: boolean }) => void
 }
 
-function RefundModal({ sale, onClose, onSubmit }: RefundModalProps) {
+function RefundModal({ sale, previouslyRefunded, onClose, onSubmit }: RefundModalProps) {
   const [selectedQty, setSelectedQty] = useState<Record<string, number>>({})
   const [reason, setReason] = useState<RefundReason>('wrong_item')
   const [note, setNote] = useState('')
   const [restockItems, setRestockItems] = useState(true)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    setSelectedQty({})
+    setReason('wrong_item')
+    setNote('')
+    setRestockItems(true)
+    setError('')
+  }, [sale?.id])
 
   if (!sale) return null
 
@@ -222,7 +254,7 @@ function RefundModal({ sale, onClose, onSubmit }: RefundModalProps) {
   const refundTotal = sale.items.reduce((sum, item) => {
     const qty = selectedQty[item.inventoryId]
     if (!qty) return sum
-    return sum + (item.totalPrice / item.quantity) * qty
+    return sum + Math.round((item.totalPrice / item.quantity) * qty * 100) / 100
   }, 0)
 
   function handleSubmit() {
@@ -236,7 +268,7 @@ function RefundModal({ sale, onClose, onSubmit }: RefundModalProps) {
           productName: i.productName,
           unitPrice: i.unitPrice,
           quantity: qty,
-          totalPrice: (i.totalPrice / i.quantity) * qty,
+          totalPrice: Math.round((i.totalPrice / i.quantity) * qty * 100) / 100,
         }
       })
     if (items.length === 0) {
@@ -262,6 +294,8 @@ function RefundModal({ sale, onClose, onSubmit }: RefundModalProps) {
           <label className="block text-sm font-medium text-app-body mb-2">Select items to refund</label>
           <div className="space-y-2 max-h-56 overflow-y-auto">
             {sale.items.map((item) => {
+              const alreadyRefunded = previouslyRefunded[item.inventoryId] ?? 0
+              const maxRemaining = Math.max(0, item.quantity - alreadyRefunded)
               const checked = selectedQty[item.inventoryId] !== undefined
               return (
                 <div key={item.inventoryId} className="border border-app-border rounded-lg p-3">
@@ -269,10 +303,11 @@ function RefundModal({ sale, onClose, onSubmit }: RefundModalProps) {
                     <input
                       type="checkbox"
                       checked={checked}
-                      onChange={() => toggleItem(item.inventoryId, item.quantity)}
+                      disabled={maxRemaining === 0}
+                      onChange={() => toggleItem(item.inventoryId, maxRemaining)}
                       className="rounded"
                     />
-                    <span className="flex-1 text-sm font-medium text-app-heading">{item.productName}</span>
+                    <span className="flex-1 text-sm font-medium text-app-heading">{item.productName}{alreadyRefunded > 0 && <span className="block text-xs text-app-muted">Already refunded: {alreadyRefunded} of {item.quantity}</span>}</span>
                     <span className="text-sm text-app-faint">{formatCurrency(item.unitPrice)}/unit</span>
                   </label>
                   {checked && (
@@ -281,12 +316,12 @@ function RefundModal({ sale, onClose, onSubmit }: RefundModalProps) {
                       <input
                         type="number"
                         min={1}
-                        max={item.quantity}
+                        max={maxRemaining}
                         value={selectedQty[item.inventoryId]}
-                        onChange={(e) => updateQty(item.inventoryId, parseInt(e.target.value, 10) || 1, item.quantity)}
+                        onChange={(e) => updateQty(item.inventoryId, parseInt(e.target.value, 10) || 1, maxRemaining)}
                         className="w-16 px-2 py-1 border border-app-border rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                       />
-                      <span className="text-xs text-app-faint">of {item.quantity} purchased</span>
+                      <span className="text-xs text-app-faint">of {maxRemaining} remaining</span>
                     </div>
                   )}
                 </div>

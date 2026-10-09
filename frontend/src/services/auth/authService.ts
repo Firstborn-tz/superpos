@@ -1,12 +1,16 @@
 import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   signInWithEmailAndPassword,
+  signOut,
   updatePassword as fbUpdatePassword,
   sendPasswordResetEmail,
 } from 'firebase/auth'
 import { auth } from '@/config/firebase'
 import type { Branch, User } from '@/types'
-import { verifyPassword, hashPassword } from '@/utils/crypto'
-import { generateId } from '@/utils/helpers'
+import { hashPassword } from '@/utils/crypto'
+import { collection, doc, getDoc, getDocs } from 'firebase/firestore'
+import { db } from '@/config/firebase'
 import { pushBranch } from '@/services/firebase/firestoreService'
 import { syncService } from '@/services/sync/syncService'
 
@@ -17,9 +21,18 @@ export interface LoginResult {
   message?: string
 }
 
+export function cashierAuthEmail(branchId: string): string {
+  return `${branchId}@cashiers.superpos.invalid`
+}
+
 export async function loginAdmin(email: string, password: string): Promise<LoginResult> {
   try {
     const cred = await signInWithEmailAndPassword(auth, email, password)
+    const access = await getDoc(doc(db, 'admins', cred.user.uid))
+    if (!access.exists() || access.data().role !== 'admin') {
+      await signOut(auth)
+      return { ok: false, message: 'This Firebase account is not configured as an administrator.' }
+    }
     const token = await cred.user.getIdToken()
     const user: User = {
       id: cred.user.uid,
@@ -65,32 +78,40 @@ function mapFirebaseAuthError(code: string): string {
   }
 }
 
-/**
- * Branch (cashier) login validates against locally cached branch records
- * so cashiers can log in even while fully offline, as long as the branch
- * list has synced to this device at least once before.
- */
-export async function loginBranch(branchName: string, password: string, branches: Branch[]): Promise<LoginResult> {
-  const branch = branches.find((b) => b.name.toLowerCase().trim() === branchName.toLowerCase().trim())
-  if (!branch) {
-    return { ok: false, message: 'Branch not found. Check the branch name or contact the administrator.' }
-  }
+/** Resolve the familiar branch name to its provisioned Firebase Auth account. */
+export async function loginCashier(branchName: string, password: string): Promise<LoginResult> {
+  try {
+    const publicBranches = await getDocs(collection(db, 'public_branches'))
+    const branch = publicBranches.docs.map((snapshot) => snapshot.data()).find(
+      (entry) => typeof entry.name === 'string' && entry.name.trim().toLowerCase() === branchName.trim().toLowerCase(),
+    )
+    if (!branch || typeof branch.id !== 'string') return { ok: false, message: 'Invalid branch name or password.' }
 
-  const valid = branch.password.includes(':') ? await verifyPassword(password, branch.password) : password === branch.password
-
-  if (!valid) {
-    return { ok: false, message: 'Incorrect branch password.' }
+    const cred = await signInWithEmailAndPassword(auth, cashierAuthEmail(branch.id), password)
+    const access = await getDoc(doc(db, 'cashier_access', cred.user.uid))
+    const data = access.data()
+    if (!access.exists() || data?.role !== 'cashier' || data.branchId !== branch.id) {
+      await signOut(auth)
+      return { ok: false, message: 'This branch cashier account is not configured correctly. Contact your administrator.' }
+    }
+    const token = await cred.user.getIdToken()
+    const user: User = {
+      id: cred.user.uid,
+      email: cred.user.email ?? cashierAuthEmail(branch.id),
+      fullName: typeof data.fullName === 'string' ? data.fullName : `${branch.name} Cashier`,
+      role: 'cashier',
+      branchId: branch.id,
+      branchName: branch.name,
+    }
+    return { ok: true, user, token }
+  } catch (err) {
+    if (!navigator.onLine) return { ok: false, message: 'Cashier sign-in requires an internet connection.' }
+    const code = err instanceof Error && 'code' in err ? (err as { code: string }).code : undefined
+    if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
+      return { ok: false, message: 'Invalid branch name or password.' }
+    }
+    return { ok: false, message: code ? `Cashier sign-in failed (${code}).` : 'Cashier login failed. Please try again.' }
   }
-
-  const user: User = {
-    id: branch.id,
-    fullName: `${branch.name} Cashier`,
-    role: 'cashier',
-    branchId: branch.id,
-    branchName: branch.name,
-  }
-  const token = generateId('token')
-  return { ok: true, user, token }
 }
 
 export async function changeAdminPassword(newPassword: string): Promise<{ ok: boolean; message?: string }> {
@@ -103,7 +124,14 @@ export async function changeAdminPassword(newPassword: string): Promise<{ ok: bo
   }
 }
 
-export async function changeBranchPassword(branch: Branch, newPassword: string): Promise<Branch> {
+export async function changeBranchPassword(branch: Branch, newPassword: string, currentPassword: string): Promise<Branch> {
+  const currentUser = auth.currentUser
+  const expectedEmail = cashierAuthEmail(branch.id)
+  if (!currentUser || currentUser.email !== expectedEmail) {
+    throw new Error('An administrator must change this cashier password in Firebase Authentication Console.')
+  }
+  await reauthenticateWithCredential(currentUser, EmailAuthProvider.credential(expectedEmail, currentPassword))
+  await fbUpdatePassword(currentUser, newPassword)
   const hashed = await hashPassword(newPassword)
   const updated: Branch = { ...branch, password: hashed }
   if (navigator.onLine) {

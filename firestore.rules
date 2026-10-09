@@ -7,24 +7,22 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Admin = authenticated via Firebase Auth (email/password).
-    //
-    // KNOWN LIMITATION: Cashiers authenticate against the branch/password
-    // record client-side (so branch login keeps working while fully
-    // offline) and talk to Firestore as unauthenticated clients. That
-    // means these rules cannot cryptographically prove a write "came from
-    // branch X" - they can only validate the *shape* of the data being
-    // written. Anyone with the app's public Firebase config (visible in
-    // any browser's dev tools, as with any client-side app) could in
-    // principle write directly to Firestore bypassing the UI.
-    //
-    // For stronger guarantees, add a Cloud Function that mints a Firebase
-    // custom auth token at branch login time, then swap isAdmin()-only
-    // checks below for checks against request.auth.token.branchId. Until
-    // then, also strongly consider enabling Firebase App Check, which
-    // blocks traffic that isn't coming from your actual deployed app.
+    // Both roles use Firebase Auth. Role and branch access are stored in
+    // admin membership and cashier-to-branch mapping documents.
     function isAdmin() {
-      return isSignedIn();
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isCashier() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/cashier_access/$(request.auth.uid))
+        && get(/databases/$(database)/documents/cashier_access/$(request.auth.uid)).data.role == 'cashier';
+    }
+
+    function cashierBranchId() {
+      return get(/databases/$(database)/documents/cashier_access/$(request.auth.uid)).data.branchId;
     }
 
     function isValidInventoryWrite() {
@@ -41,23 +39,28 @@ service cloud.firestore {
         && d.totalAmount is number && d.totalAmount >= 0;
     }
 
-    // Branch documents currently include the password hash field, so this
-    // collection is readable by any client (required for offline cashier
-    // login against synced data - see limitation note above). Do not add
-    // any other sensitive fields to branch documents without moving
-    // credentials to a separate, admin-only collection first.
+    match /admins/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if isAdmin();
+    }
+
+    // A branch account is provisioned in Firebase Auth and mapped to its
+    // branch by an admin. Cashiers may inspect only their own mapping.
+    match /cashier_access/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if isAdmin();
+    }
+
+    // Branch documents contain password hashes. Public branch data is
+    // served from public_branches instead.
     match /branches/{branchId} {
-      allow read: if true;
+      allow read: if isAdmin();
       allow create, delete: if isAdmin();
-      // Admins can update anything (rename, reset password, etc). A
-      // non-admin write is only allowed if it changes the password
-      // field alone and nothing else (a cashier changing their own
-      // branch's password from Settings) - cashiers aren't Firebase
-      // Auth'd at all (see limitation note above), so this can't be
-      // scoped to "their own branch" specifically without the Cloud
-      // Function upgrade mentioned above.
+      // Admins can update branch records. A cashier may change only the
+      // password field on their assigned branch record.
       allow update: if isAdmin()
-        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['password']);
+        || (isCashier() && cashierBranchId() == branchId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['password']));
     }
 
     // This is the credential-free projection used by the public landing
@@ -74,33 +77,33 @@ service cloud.firestore {
     }
 
     match /sales/{saleId} {
-      allow read: if isAdmin();
-      allow create: if isValidSaleWrite();
+      allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
+      allow create: if isValidSaleWrite() && (isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId()));
       // Cashiers need to flag a sale as refunded from the Refunds page,
       // so update is allowed with the same shape validation as create -
       // full audit trail lives in the separate /refunds collection.
-      allow update: if isValidSaleWrite();
+      allow update: if isValidSaleWrite() && (isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId() && request.resource.data.branchId == cashierBranchId()));
       allow delete: if isAdmin();
     }
 
     match /refunds/{refundId} {
-      allow read: if isAdmin();
-      allow create: if true;
+      allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
+      allow create: if isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId());
       allow update, delete: if isAdmin();
     }
 
     match /stock_adjustments/{adjustmentId} {
-      allow read: if isAdmin();
-      allow create: if true;
+      allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
+      allow create: if isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId());
       allow update, delete: if isAdmin();
     }
 
-    // Cashiers use the app's offline branch-password login, not Firebase
-    // Auth, so expense creation is validated by its record shape. Admins
-    // (Firebase-authenticated) can read the reports and manage records.
+    // Cashiers may create expenses for their assigned branch; admins can
+    // review and manage all branch records.
     match /branch_expenses/{expenseId} {
-      allow read: if isAdmin();
-      allow create: if request.resource.data.keys().hasAll([
+      allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
+      allow create: if isCashier() && request.resource.data.branchId == cashierBranchId()
+        && request.resource.data.keys().hasAll([
           'id', 'name', 'amount', 'createdAt', 'recordedBy', 'branchId', 'branchName'
         ])
         && request.resource.data.id == expenseId

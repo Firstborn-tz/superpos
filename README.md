@@ -77,11 +77,26 @@ phone/tablet on the same Wi-Fi).
 ### Create the first admin account
 
 Admins sign in with Firebase Authentication. Create the owner's account once,
-from the Firebase Console → Authentication → Users → "Add user" (email +
-password), or by running a one-off sign-up script. Cashiers do **not** need
-Firebase Auth accounts — they log in with a branch name + password that the
-admin sets from the **Branches** page, and that check happens against
-Firestore-synced data so it keeps working offline.
+from Firebase Console > Authentication > Users > Add user (email + password).
+Then create `admins/{uid}` in Firestore using that account's Firebase Auth UID
+as the document ID and `{ "role": "admin" }` as its data.
+
+Cashiers keep signing in with the branch name and branch password. Each branch
+also needs a Firebase Auth Email/Password user whose email is
+`<branchId>@cashiers.superpos.invalid` and whose password is the branch
+password. Create `cashier_access/{authUid}` in Firestore with
+`{ "role": "cashier", "branchId": "<branchId>" }`. Use the ID of the matching
+branch document for `branchId`. The app resolves the public branch name to that
+ID before signing the cashier in. The `.invalid` address is an internal login
+identifier and does not receive email.
+
+Provision these Auth users and mapping documents in Firebase Console when
+adding branches. Firebase client apps cannot securely create or reset other
+users' passwords without a trusted server. Existing branch passwords are
+stored as hashes, so enter the current password when provisioning; otherwise
+reset it in Firebase Authentication Console and give the cashier the new
+password. Cashiers can change their own password from Settings after signing
+in.
 
 ### Build for production
 
@@ -99,11 +114,11 @@ Nginx server on your own machine).
 npm install -g firebase-tools   # once
 firebase login
 cd ..                            # repo root, where firebase.json lives
-firebase deploy
+npm run build --prefix frontend
+firebase deploy --only firestore:rules,firestore:indexes,hosting
 ```
 
-This deploys the built frontend **and** the Firestore security rules in
-`firestore.rules` together.
+This deploys the built frontend, Firestore rules, and indexes. The root `firebase.json` does not deploy Cloud Functions, so this setup does not require the Blaze plan. Before deploying rules to an existing project, create the `admins/{uid}` membership document for each administrator or access will be denied by the role checks. Confirm Email/Password sign-in is enabled and your production domain is listed under Authentication > Settings > Authorized domains.
 
 ### Preview a production build locally
 
@@ -137,9 +152,9 @@ transactions around stock decrements (see "Extending").
 
 - [ ] Create the real admin account(s) in Firebase Authentication and remove
       any test accounts.
-- [ ] Review and tighten `firestore.rules` for your business's exact security
-      needs (the shipped rules allow open reads to keep branch/cashier logins
-      working offline-first; see the comments in that file).
+- [ ] Review `firestore.rules` against your business's access needs. Sales,
+      refunds, expenses, and stock adjustments are role and branch scoped;
+      inventory, public branch names, and chat currently have public reads.
 - [ ] Set Firebase Authentication's authorized domains to your production
       domain (Firebase Console → Authentication → Settings).
 - [ ] Generate real app icons if you want your own branding — replace
@@ -158,11 +173,7 @@ transactions around stock decrements (see "Extending").
 - **Server-side logic** (SMS receipts, accounting exports, scheduled
   reports): add a Firebase Cloud Function that listens to Firestore writes,
   rather than standing up a separate API server.
-- **Stricter cashier auth**: today, branch login is validated client-side
-  against the synced branch record — good enough for a trusted till device,
-  but if you want server-verified sessions per cashier, add Firebase
-  Anonymous Auth or custom tokens minted by a Cloud Function at branch
-  login time.
+- **Cashier accounts**: branch name and password remain the cashier-facing credentials; Firebase Auth accounts and `cashier_access` documents provide authenticated, branch-scoped Firestore access without a server function.
 - **Multi-till concurrency**: wrap stock decrements in a Firestore
   `runTransaction` in `src/services/firebase/firestoreService.ts` if a
   branch will ever run two tills against the same inventory simultaneously.

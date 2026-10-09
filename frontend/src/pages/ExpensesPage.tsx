@@ -20,7 +20,7 @@ export default function ExpensesPage() {
   const [amount, setAmount] = useState('')
 
   const expenses = useMemo(() => branchExpenses
-    .filter((expense) => (!user?.branchId || expense.branchId === user.branchId) && isWithinRange(expense.createdAt, startOfDay(new Date(selectedDate)), endOfDay(new Date(selectedDate))))
+    .filter((expense) => expense.branchId === user?.branchId && isWithinRange(expense.createdAt, startOfDay(new Date(selectedDate)), endOfDay(new Date(selectedDate))))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [branchExpenses, user, selectedDate])
   const total = expenses.reduce((sum, expense) => sum + expense.amount, 0)
 

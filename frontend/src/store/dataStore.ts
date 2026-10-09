@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { ActivityLogEntry, Branch, BranchExpenseRecord, BranchSyncStatus, InventoryItem, RefundRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
 import { STORAGE_KEYS, readStorage, writeStorage } from '@/utils/storage'
-import { pullAllFromFirestore, pullPublicOperationalData } from '@/services/firebase/firestoreService'
+import { pullAllFromFirestore, pullCashierRecords, pullPublicOperationalData } from '@/services/firebase/firestoreService'
 import { useAuthStore } from '@/store/authStore'
 
 const REFUNDS_KEY = 'superpos_refunds'
@@ -67,9 +67,14 @@ export const useDataStore = create<DataState>((set, get) => ({
       const isAdmin = useAuthStore.getState().user?.role === 'admin'
       if (!isAdmin) {
         const { inventory, branches } = await pullPublicOperationalData()
-        set({ inventory, branches })
+        const branchId = useAuthStore.getState().user?.branchId
+        const records = branchId ? await pullCashierRecords(branchId) : { sales: [], refunds: [], branchExpenses: [] }
+        set({ inventory, branches, sales: records.sales, refunds: records.refunds, branchExpenses: records.branchExpenses })
         writeStorage(STORAGE_KEYS.INVENTORY, inventory)
         writeStorage(STORAGE_KEYS.BRANCHES, branches)
+        writeStorage(STORAGE_KEYS.SALES, records.sales)
+        writeStorage(REFUNDS_KEY, records.refunds)
+        writeStorage(EXPENSES_KEY, records.branchExpenses)
         return
       }
 
