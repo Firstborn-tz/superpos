@@ -1,6 +1,7 @@
 import type {
   ActivityLogEntry,
   Branch,
+  BranchExpenseRecord,
   ChatMessage,
   InventoryItem,
   OperationType,
@@ -22,6 +23,7 @@ import {
   pushRefundRecord,
   pushSaleRecord,
   pushStockAdjustment,
+  pushBranchExpense,
   pushBranchSyncStatus,
 } from '@/services/firebase/firestoreService'
 
@@ -153,6 +155,9 @@ class SyncService {
         return
       case 'STOCK_ADJUSTMENT':
         await pushStockAdjustment(op.payload as StockAdjustmentRecord)
+        return
+      case 'BRANCH_EXPENSE':
+        await pushBranchExpense(op.payload as BranchExpenseRecord)
         return
       case 'ACTIVITY_LOG':
         await pushActivityLogEntry(op.payload as ActivityLogEntry)

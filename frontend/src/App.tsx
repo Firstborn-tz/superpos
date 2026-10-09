@@ -21,6 +21,7 @@ import BarcodePage from '@/pages/BarcodePage'
 import ReportsPage from '@/pages/ReportsPage'
 import BranchesPage from '@/pages/BranchesPage'
 import SettingsPage from '@/pages/SettingsPage'
+import ExpensesPage from '@/pages/ExpensesPage'
 
 function AppRoutes() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -59,6 +60,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/expenses" element={<ProtectedRoute allowedRoles={['cashier']}><ExpensesPage /></ProtectedRoute>} />
       <Route
         path="/refunds"
         element={

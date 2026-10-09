@@ -146,6 +146,16 @@ export interface StockAdjustmentRecord {
   branchName?: string
 }
 
+export interface BranchExpenseRecord {
+  id: string
+  name: string
+  amount: number
+  createdAt: string
+  recordedBy: string
+  branchId?: string
+  branchName?: string
+}
+
 export interface HeldSale {
   id: string
   label: string
@@ -159,6 +169,7 @@ export type ActivityAction =
   | 'SALE'
   | 'REFUND'
   | 'STOCK_ADJUSTMENT'
+  | 'BRANCH_EXPENSE'
   | 'ADD_PRODUCT'
   | 'ADD_STOCK'
   | 'UPDATE_PRODUCT'
@@ -197,6 +208,7 @@ export type OperationType =
   | 'UPDATE_BRANCH_PASSWORD'
   | 'REFUND'
   | 'STOCK_ADJUSTMENT'
+  | 'BRANCH_EXPENSE'
   | 'ACTIVITY_LOG'
   | 'CHAT_MESSAGE'
 

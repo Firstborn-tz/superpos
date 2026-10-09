@@ -95,6 +95,27 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Cashiers use the app's offline branch-password login, not Firebase
+    // Auth, so expense creation is validated by its record shape. Admins
+    // (Firebase-authenticated) can read the reports and manage records.
+    match /branch_expenses/{expenseId} {
+      allow read: if isAdmin();
+      allow create: if request.resource.data.keys().hasAll([
+          'id', 'name', 'amount', 'createdAt', 'recordedBy', 'branchId', 'branchName'
+        ])
+        && request.resource.data.id == expenseId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 160
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.createdAt is string
+        && request.resource.data.recordedBy is string
+        && request.resource.data.branchId is string
+        && request.resource.data.branchName is string;
+      allow update, delete: if isAdmin();
+    }
+
     match /activity_log/{entryId} {
       allow read: if isAdmin();
       allow create: if true;

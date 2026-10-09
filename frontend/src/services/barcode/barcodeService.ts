@@ -35,7 +35,9 @@ export function renderBarcodeToDataUrl({ data, type }: RenderOptions): string {
       text: data,
       scale: 3,
       height: type === 'qrcode' ? 25 : 12,
-      includetext: type !== 'qrcode',
+      // Keep the barcode symbol clean; any desired human-readable wording
+      // is printed separately using the text-only label mode.
+      includetext: false,
       textxalign: 'center',
     })
     return canvas.toDataURL('image/png')

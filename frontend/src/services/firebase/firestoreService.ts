@@ -14,7 +14,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore'
 import { auth, db } from '@/config/firebase'
-import type { ActivityLogEntry, Branch, BranchSyncStatus, ChatMessage, InventoryItem, PublicBranch, RefundRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
+import type { ActivityLogEntry, Branch, BranchExpenseRecord, BranchSyncStatus, ChatMessage, InventoryItem, PublicBranch, RefundRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
 
 export const COLLECTIONS = {
   BRANCHES: 'branches',
@@ -23,6 +23,7 @@ export const COLLECTIONS = {
   SALES: 'sales',
   REFUNDS: 'refunds',
   STOCK_ADJUSTMENTS: 'stock_adjustments',
+  BRANCH_EXPENSES: 'branch_expenses',
   ACTIVITY_LOG: 'activity_log',
   CHAT_MESSAGES: 'chat_messages',
   ADMINS: 'admins',
@@ -36,18 +37,20 @@ export async function pullAllFromFirestore(): Promise<{
   branches: Branch[]
   refunds: RefundRecord[]
   stockAdjustments: StockAdjustmentRecord[]
+  branchExpenses: BranchExpenseRecord[]
   activityLog: ActivityLogEntry[]
   branchSyncs: BranchSyncStatus[]
 }> {
   // Admin information must be authoritative. getDocs() is allowed to return
   // Firestore's persistent local cache; this method explicitly waits for the
   // server instead.
-  const [invSnap, salesSnap, branchSnap, refundSnap, adjSnap, logSnap] = await Promise.all([
+  const [invSnap, salesSnap, branchSnap, refundSnap, adjSnap, expenseSnap, logSnap] = await Promise.all([
     getDocsFromServer(query(collection(db, COLLECTIONS.INVENTORY), orderBy('createdAt', 'desc'))),
     getDocsFromServer(query(collection(db, COLLECTIONS.SALES), orderBy('createdAt', 'desc'))),
     getDocsFromServer(query(collection(db, COLLECTIONS.BRANCHES), orderBy('createdAt', 'desc'))),
     getDocsFromServer(query(collection(db, COLLECTIONS.REFUNDS), orderBy('createdAt', 'desc'))),
     getDocsFromServer(query(collection(db, COLLECTIONS.STOCK_ADJUSTMENTS), orderBy('createdAt', 'desc'))),
+    getDocsFromServer(query(collection(db, COLLECTIONS.BRANCH_EXPENSES), orderBy('createdAt', 'desc'))),
     getDocsFromServer(query(collection(db, COLLECTIONS.ACTIVITY_LOG), orderBy('createdAt', 'desc'), limit(500))),
   ])
 
@@ -65,6 +68,7 @@ export async function pullAllFromFirestore(): Promise<{
     branches: branchSnap.docs.map((d) => d.data() as Branch),
     refunds: refundSnap.docs.map((d) => d.data() as RefundRecord),
     stockAdjustments: adjSnap.docs.map((d) => d.data() as StockAdjustmentRecord),
+    branchExpenses: expenseSnap.docs.map((d) => d.data() as BranchExpenseRecord),
     activityLog: logSnap.docs.map((d) => d.data() as ActivityLogEntry),
     branchSyncs: syncSnap?.docs.map((d) => d.data() as BranchSyncStatus) ?? [],
   }
@@ -150,6 +154,10 @@ export async function pushRefundRecord(refund: RefundRecord): Promise<void> {
 
 export async function pushStockAdjustment(adjustment: StockAdjustmentRecord): Promise<void> {
   await setDoc(doc(db, COLLECTIONS.STOCK_ADJUSTMENTS, adjustment.id), adjustment, { merge: true })
+}
+
+export async function pushBranchExpense(expense: BranchExpenseRecord): Promise<void> {
+  await setDoc(doc(db, COLLECTIONS.BRANCH_EXPENSES, expense.id), expense, { merge: true })
 }
 
 export async function pushActivityLogEntry(entry: ActivityLogEntry): Promise<void> {

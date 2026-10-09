@@ -4,6 +4,7 @@ export const translations = {
   en: {
     nav_dashboard: 'Dashboard',
     nav_pos: 'Point of Sale',
+    nav_expenses: 'Branch Expenses',
     nav_inventory: 'Inventory',
     nav_refunds: 'Refunds',
     nav_verify: 'Verify Product',
@@ -56,6 +57,7 @@ export const translations = {
   sw: {
     nav_dashboard: 'Dashibodi',
     nav_pos: 'Mauzo (POS)',
+    nav_expenses: 'Matumizi ya Tawi',
     nav_inventory: 'Bidhaa Ghalani',
     nav_refunds: 'Marejesho',
     nav_verify: 'Hakiki Bidhaa',

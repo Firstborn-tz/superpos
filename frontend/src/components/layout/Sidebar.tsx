@@ -32,6 +32,7 @@ interface NavItem {
     | 'nav_branches'
     | 'nav_settings'
     | 'nav_messages'
+    | 'nav_expenses'
   icon: (p: { width?: number; height?: number }) => ReactElement
   roles: Array<'admin' | 'cashier'>
 }
@@ -39,6 +40,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', labelKey: 'nav_dashboard', icon: DashboardIcon, roles: ['admin'] },
   { to: '/pos', labelKey: 'nav_pos', icon: POSIcon, roles: ['cashier'] },
+  { to: '/expenses', labelKey: 'nav_expenses', icon: ReportsIcon, roles: ['cashier'] },
   { to: '/inventory', labelKey: 'nav_inventory', icon: InventoryIcon, roles: ['admin', 'cashier'] },
   { to: '/refunds', labelKey: 'nav_refunds', icon: RefundIcon, roles: ['admin', 'cashier'] },
   { to: '/verify-product', labelKey: 'nav_verify', icon: SearchIcon, roles: ['cashier'] },

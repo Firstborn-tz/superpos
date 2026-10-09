@@ -1,11 +1,12 @@
 import { create } from 'zustand'
-import type { ActivityLogEntry, Branch, BranchSyncStatus, InventoryItem, RefundRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
+import type { ActivityLogEntry, Branch, BranchExpenseRecord, BranchSyncStatus, InventoryItem, RefundRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
 import { STORAGE_KEYS, readStorage, writeStorage } from '@/utils/storage'
 import { pullAllFromFirestore, pullPublicOperationalData } from '@/services/firebase/firestoreService'
 import { useAuthStore } from '@/store/authStore'
 
 const REFUNDS_KEY = 'superpos_refunds'
 const ADJUSTMENTS_KEY = 'superpos_stock_adjustments'
+const EXPENSES_KEY = 'superpos_branch_expenses'
 const ACTIVITY_LOG_KEY = 'superpos_activity_log'
 
 interface DataState {
@@ -14,6 +15,7 @@ interface DataState {
   branches: Branch[]
   refunds: RefundRecord[]
   stockAdjustments: StockAdjustmentRecord[]
+  branchExpenses: BranchExpenseRecord[]
   activityLog: ActivityLogEntry[]
   branchSyncs: BranchSyncStatus[]
   hydrated: boolean
@@ -30,6 +32,7 @@ interface DataState {
   removeBranch: (branchId: string) => void
   addRefund: (refund: RefundRecord) => void
   addStockAdjustment: (adjustment: StockAdjustmentRecord) => void
+  addBranchExpense: (expense: BranchExpenseRecord) => void
   addActivityLogEntry: (entry: ActivityLogEntry) => void
   clearActivityLog: () => void
 }
@@ -40,6 +43,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   branches: [],
   refunds: [],
   stockAdjustments: [],
+  branchExpenses: [],
   activityLog: [],
   branchSyncs: [],
   hydrated: false,
@@ -51,6 +55,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       branches: readStorage<Branch[]>(STORAGE_KEYS.BRANCHES, []),
       refunds: readStorage<RefundRecord[]>(REFUNDS_KEY, []),
       stockAdjustments: readStorage<StockAdjustmentRecord[]>(ADJUSTMENTS_KEY, []),
+      branchExpenses: readStorage<BranchExpenseRecord[]>(EXPENSES_KEY, []),
       activityLog: readStorage<ActivityLogEntry[]>(ACTIVITY_LOG_KEY, []),
       hydrated: true,
     })
@@ -68,13 +73,14 @@ export const useDataStore = create<DataState>((set, get) => ({
         return
       }
 
-      const { inventory, sales, branches, refunds, stockAdjustments, activityLog, branchSyncs } = await pullAllFromFirestore()
-      set({ inventory, sales, branches, refunds, stockAdjustments, activityLog, branchSyncs, hydrated: true })
+      const { inventory, sales, branches, refunds, stockAdjustments, branchExpenses, activityLog, branchSyncs } = await pullAllFromFirestore()
+      set({ inventory, sales, branches, refunds, stockAdjustments, branchExpenses, activityLog, branchSyncs, hydrated: true })
       writeStorage(STORAGE_KEYS.INVENTORY, inventory)
       writeStorage(STORAGE_KEYS.SALES, sales)
       writeStorage(STORAGE_KEYS.BRANCHES, branches)
       writeStorage(REFUNDS_KEY, refunds)
       writeStorage(ADJUSTMENTS_KEY, stockAdjustments)
+      writeStorage(EXPENSES_KEY, branchExpenses)
       writeStorage(ACTIVITY_LOG_KEY, activityLog)
     } catch (err) {
       console.error('Failed to refresh from server', err)
@@ -144,6 +150,12 @@ export const useDataStore = create<DataState>((set, get) => ({
     const next = [adjustment, ...get().stockAdjustments]
     set({ stockAdjustments: next })
     writeStorage(ADJUSTMENTS_KEY, next)
+  },
+
+  addBranchExpense: (expense) => {
+    const next = [expense, ...get().branchExpenses]
+    set({ branchExpenses: next })
+    writeStorage(EXPENSES_KEY, next)
   },
 
   addActivityLogEntry: (entry) => {

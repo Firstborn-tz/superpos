@@ -7,6 +7,7 @@ import { printElement } from '@/utils/print'
 import { PrintIcon, WarningIcon } from '@/components/common/Icons'
 
 type PrinterType = 'usb' | 'bluetooth'
+type PrintMode = 'barcode' | 'text'
 
 interface InventoryNavState {
   barcode?: string
@@ -50,6 +51,11 @@ export default function BarcodePage() {
   const [data] = useState(navState?.barcode ?? generateBarcode())
   const [productName] = useState(navState?.productName ?? '')
   const [price] = useState(navState?.price ? String(navState.price) : '')
+  const [labelText, setLabelText] = useState(navState?.productName ?? '')
+  const [textPosition, setTextPosition] = useState<'top' | 'bottom'>('top')
+  const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>('center')
+  const [boldText, setBoldText] = useState(false)
+  const [printMode, setPrintMode] = useState<PrintMode>('barcode')
   const [quantity, setQuantity] = useState(1)
   const [printerType, setPrinterType] = useState<PrinterType>('usb')
   const [labelSizeKey, setLabelSizeKey] = useState(LABEL_SIZES[0].key)
@@ -59,6 +65,7 @@ export default function BarcodePage() {
   const [btStatus, setBtStatus] = useState('')
 
   const labelSize = LABEL_SIZES.find((s) => s.key === labelSizeKey) ?? LABEL_SIZES[0]
+  const fittedText = useMemo(() => fitLabelText(labelText, labelSize.width - 4, printMode === 'text' ? labelSize.height - 4 : Math.min(8, labelSize.height * 0.3), boldText), [labelText, labelSize, boldText, printMode])
 
   // For QR codes, embed the full readable product info in the scannable
   // data itself - useful for phone-camera scans since the printed label
@@ -115,7 +122,7 @@ export default function BarcodePage() {
 
   function handlePrint() {
     try {
-      console.log('[SuperPOS] Print requested', { labelSize, quantity, hasPreview: !!previewUrl })
+      console.log('[SuperPOS] Print requested', { labelSize, quantity, printMode, hasPreview: !!previewUrl })
       printElement('barcode-print', 'label', { width: labelSize.width, height: labelSize.height })
     } catch (err) {
       console.error('[SuperPOS] Print failed', err)
@@ -195,6 +202,27 @@ export default function BarcodePage() {
             </p>
           )}
 
+          <div className="space-y-3 rounded-lg border border-app-border p-3">
+            <div>
+              <label className="block text-sm font-medium text-app-body mb-1">Print type</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setPrintMode('barcode')} className={`py-2 rounded-lg text-sm font-medium border ${printMode === 'barcode' ? 'border-primary bg-primary-50 text-primary' : 'border-app-border text-app-muted'}`}>Barcode label</button>
+                <button type="button" onClick={() => setPrintMode('text')} className={`py-2 rounded-lg text-sm font-medium border ${printMode === 'text' ? 'border-primary bg-primary-50 text-primary' : 'border-app-border text-app-muted'}`}>Text only</button>
+              </div>
+              <p className="text-xs text-app-faint mt-1">Text only prints your custom text on its own label, without a barcode.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-app-body mb-1">Custom label text</label>
+              <textarea value={labelText} onChange={(e) => setLabelText(e.target.value)} rows={2} maxLength={160} placeholder="Write your own label text" className="w-full px-3.5 py-2.5 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+              <p className="text-xs text-app-faint mt-1">Text size adjusts to fit the label. Use line breaks to control wrapping.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm font-medium text-app-body">Text position<select value={textPosition} onChange={(e) => setTextPosition(e.target.value as 'top' | 'bottom')} className="mt-1 w-full px-3 py-2 border border-app-border-input rounded-lg bg-app-card"><option value="top">Above barcode</option><option value="bottom">Below barcode</option></select></label>
+              <label className="text-sm font-medium text-app-body">Alignment<select value={textAlign} onChange={(e) => setTextAlign(e.target.value as 'left' | 'center' | 'right')} className="mt-1 w-full px-3 py-2 border border-app-border-input rounded-lg bg-app-card"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-app-body"><input type="checkbox" checked={boldText} onChange={(e) => setBoldText(e.target.checked)} /> Bold text</label>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-app-body mb-1">Label Size</label>
             <select
@@ -269,8 +297,8 @@ export default function BarcodePage() {
           <h2 className="font-bold text-app-heading mb-4">Preview</h2>
           <div className="flex-1 flex items-center justify-center bg-app-alt rounded-lg p-4 min-h-[200px]">
             {previewUrl ? (
-              <div className="bg-app-card border border-app-border rounded-lg p-4 text-center">
-                <img src={previewUrl} alt="Barcode preview" className="mx-auto max-w-full" />
+              <div className="bg-white border border-app-border rounded-lg p-3">
+                <LabelPreview imageUrl={previewUrl} width={labelSize.width} height={labelSize.height} text={printMode === 'text' ? labelText : ''} fittedText={fittedText} textPosition={textPosition} textAlign={textAlign} boldText={boldText} showBarcode={printMode === 'barcode'} />
                 <p className="text-xs text-app-faint mt-2">
                   {labelSize.width} x {labelSize.height} mm label &middot; {quantity} {quantity > 1 ? 'copies' : 'copy'}
                 </p>
@@ -280,38 +308,78 @@ export default function BarcodePage() {
             )}
           </div>
 
-          {/* Printed output: barcode image only, one per label, sized to
+          {/* Printed output: composed label text and barcode, sized to
               the physical label dimensions with no page margins. Hidden
               on screen (Tailwind's print:block only shows it inside an
               actual print job triggered by printElement below). */}
           {previewUrl && (
             <div id="barcode-print" className="hidden print:block">
               {Array.from({ length: quantity }).map((_, i) => (
-                <div
+                <LabelPreview
                   key={i}
-                  style={{
-                    width: `${labelSize.width}mm`,
-                    height: `${labelSize.height}mm`,
-                    pageBreakAfter: i < quantity - 1 ? 'always' : 'auto',
-                  }}
-                  className="flex items-center justify-center"
-                >
-                  <img src={previewUrl} alt="Barcode" />
-                </div>
+                  imageUrl={previewUrl}
+                  width={labelSize.width}
+                  height={labelSize.height}
+                  text={printMode === 'text' ? labelText : ''}
+                  fittedText={fittedText}
+                  textPosition={textPosition}
+                  textAlign={textAlign}
+                  boldText={boldText}
+                  showBarcode={printMode === 'barcode'}
+                  pageBreakAfter={i < quantity - 1 ? 'always' : 'auto'}
+                />
               ))}
             </div>
           )}
 
           <button
             onClick={handlePrint}
-            disabled={!previewUrl}
+            disabled={printMode === 'barcode' ? !previewUrl : !labelText.trim()}
             className="mt-4 w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors"
           >
             <PrintIcon width={16} height={16} />
-            Print {quantity > 1 ? `${quantity} Labels` : 'Label'}
+            Print {quantity > 1 ? `${quantity} ${printMode === 'text' ? 'Text Labels' : 'Labels'}` : printMode === 'text' ? 'Text Label' : 'Label'}
           </button>
         </div>
       </div>
     </DashboardLayout>
   )
+}
+
+function fitLabelText(text: string, widthMm: number, heightMm: number, bold: boolean): { fontSizePx: number; lines: string[] } {
+  const context = document.createElement('canvas').getContext('2d')
+  const maxWidth = widthMm * 96 / 25.4
+  const maxHeight = heightMm * 96 / 25.4
+  const paragraphs = text.split('\n')
+  for (let size = 24; size >= 8; size -= 1) {
+    if (context) context.font = `${bold ? 'bold ' : ''}${size}px Arial`
+    const lines: string[] = []
+    for (const paragraph of paragraphs) {
+      const words = paragraph.split(/\s+/).filter(Boolean)
+      if (!words.length) { lines.push(''); continue }
+      let line = ''
+      for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word
+        const wordWidth = (value: string) => context?.measureText(value).width ?? value.length * size * 0.55
+        if (line && wordWidth(candidate) > maxWidth) { lines.push(line); line = word }
+        else line = candidate
+      }
+      lines.push(line)
+    }
+    if (lines.length * size * 1.15 <= maxHeight) return { fontSizePx: size, lines }
+  }
+  return { fontSizePx: 8, lines: text.split('\n') }
+}
+
+function LabelPreview({ imageUrl, width, height, text, fittedText, textPosition, textAlign, boldText, showBarcode, pageBreakAfter }: {
+  imageUrl: string; width: number; height: number; text: string
+  fittedText: { fontSizePx: number; lines: string[] }; textPosition: 'top' | 'bottom'
+  textAlign: 'left' | 'center' | 'right'; boldText: boolean; showBarcode: boolean; pageBreakAfter?: 'always' | 'auto'
+}) {
+  const textBlock = text.trim() ? <div style={{ fontSize: `${fittedText.fontSizePx}px`, fontWeight: boldText ? 700 : 400, textAlign: textAlign, lineHeight: 1.05, maxHeight: `${Math.min(8, height * 0.3)}mm`, overflow: 'hidden', overflowWrap: 'anywhere', flex: '0 0 auto' }}>{fittedText.lines.map((line, i) => <div key={i}>{line || '\u00a0'}</div>)}</div> : null
+  return <div style={{ width: `${width}mm`, height: `${height}mm`, padding: '1mm 2mm', boxSizing: 'border-box', pageBreakAfter, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: showBarcode ? 'center' : textPosition === 'top' ? 'flex-start' : 'flex-end', gap: '0.5mm', background: '#fff', color: '#000' }}>
+    {textPosition === 'top' && textBlock}
+    {showBarcode && <div style={{ minHeight: 0, flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><img src={imageUrl} alt="Barcode" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /></div>}
+    {textPosition === 'bottom' && textBlock}
+  </div>
 }

@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useDataStore } from '@/store/dataStore'
 import { clearActivityLog as clearActivityLogRemote } from '@/services/firebase/firestoreService'
 import { toast } from '@/store/toastStore'
-import type { SaleRecord } from '@/types'
+import type { BranchExpenseRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
 import {
   formatCurrency,
   formatDate,
@@ -232,7 +232,7 @@ function CashierDailySalesReport() {
 /* every tab.                                                          */
 /* ------------------------------------------------------------------ */
 
-type ReportType = 'sales' | 'profit' | 'inventory' | 'expiry' | 'activity'
+type ReportType = 'sales' | 'profit' | 'inventory' | 'expiry' | 'expenses' | 'adjustments' | 'activity'
 type RangeKey = 'daily' | 'weekly' | 'monthly' | 'all'
 
 const REPORT_TYPES: { key: ReportType; label: string }[] = [
@@ -240,6 +240,8 @@ const REPORT_TYPES: { key: ReportType; label: string }[] = [
   { key: 'profit', label: 'Profit' },
   { key: 'inventory', label: 'Inventory' },
   { key: 'expiry', label: 'Expiry' },
+  { key: 'expenses', label: 'Expenses' },
+  { key: 'adjustments', label: 'Stock Adjustments' },
   { key: 'activity', label: 'Activity Log' },
 ]
 
@@ -253,11 +255,12 @@ const RANGES: { key: RangeKey; label: string }[] = [
 const CHART_COLORS = ['#16a34a', '#2563eb', '#f59e0b', '#ef4444', '#8b5cf6', '#0891b2', '#db2777']
 
 function AdminReports() {
-  const { sales, inventory, activityLog, branches, clearActivityLog } = useDataStore()
+  const { sales, inventory, activityLog, branches, branchExpenses, stockAdjustments, clearActivityLog } = useDataStore()
   const [reportType, setReportType] = useState<ReportType>('sales')
   const [range, setRange] = useState<RangeKey>('all')
   const [branchFilter, setBranchFilter] = useState<string>('all')
   const [activeSale, setActiveSale] = useState<SaleRecord | null>(null)
+  const [activeExpenseDay, setActiveExpenseDay] = useState<string | null>(null)
 
   const branchScopedSales = useMemo(
     () => (branchFilter === 'all' ? sales : sales.filter((s) => s.branchId === branchFilter)),
@@ -267,6 +270,26 @@ function AdminReports() {
     () => (branchFilter === 'all' ? inventory : inventory.filter((i) => i.branchId === branchFilter)),
     [inventory, branchFilter],
   )
+  const filteredExpenses = useMemo(() => {
+    const scoped = branchFilter === 'all' ? branchExpenses : branchExpenses.filter((e) => e.branchId === branchFilter)
+    if (range === 'all') return scoped
+    const { start, end } = getRangeForPeriod(range)
+    return scoped.filter((e) => isWithinRange(e.createdAt, start, end))
+  }, [branchExpenses, branchFilter, range])
+  const filteredAdjustments = useMemo(() => {
+    const scoped = branchFilter === 'all' ? stockAdjustments : stockAdjustments.filter((a) => a.branchId === branchFilter)
+    if (range === 'all') return scoped
+    const { start, end } = getRangeForPeriod(range)
+    return scoped.filter((a) => isWithinRange(a.createdAt, start, end))
+  }, [stockAdjustments, branchFilter, range])
+  const expensesByDay = useMemo(() => {
+    const days = new Map<string, BranchExpenseRecord[]>()
+    filteredExpenses.forEach((expense) => {
+      const day = expense.createdAt.slice(0, 10)
+      days.set(day, [...(days.get(day) ?? []), expense])
+    })
+    return [...days.entries()].sort(([a], [b]) => b.localeCompare(a))
+  }, [filteredExpenses])
 
   const filteredSales = useMemo(() => {
     if (range === 'all') return branchScopedSales
@@ -378,6 +401,14 @@ function AdminReports() {
           Date: formatDateTime(a.createdAt),
         })),
       )
+    } else if (reportType === 'expenses') {
+      exportToCsv('branch-expenses-report', filteredExpenses.map((e) => ({
+        Expense: e.name, Amount: e.amount, Branch: e.branchName ?? '', 'Recorded By': e.recordedBy, Date: formatDateTime(e.createdAt),
+      })))
+    } else if (reportType === 'adjustments') {
+      exportToCsv('stock-adjustments-report', filteredAdjustments.map((a) => ({
+        Product: a.productName, 'Quantity Change': a.quantityChange, Reason: a.reason, Note: a.note ?? '', Branch: a.branchName ?? '', 'Performed By': a.performedBy, Date: formatDateTime(a.createdAt),
+      })))
     }
   }
 
@@ -437,6 +468,11 @@ function AdminReports() {
                   {r.label}
                 </button>
               ))}
+            </div>
+          )}
+          {(reportType === 'expenses' || reportType === 'adjustments') && (
+            <div className="flex gap-2 flex-wrap">
+              {RANGES.map((r) => <button key={r.key} onClick={() => setRange(r.key)} className={`px-3 py-1.5 rounded-lg text-sm font-medium ${range === r.key ? 'bg-primary text-white' : 'bg-app-hover text-app-body'}`}>{r.label}</button>)}
             </div>
           )}
 
@@ -646,6 +682,23 @@ function AdminReports() {
             </div>
           )}
 
+          {reportType === 'expenses' && (
+            <div className="bg-app-card rounded-card shadow-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-app-border"><h2 className="font-bold text-app-heading">Branch expenses by day</h2></div>
+              <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-app-alt text-app-muted"><tr><th className="text-left px-5 py-3">Day</th><th className="text-left px-5 py-3">Branch</th><th className="text-right px-5 py-3">Entries</th><th className="text-right px-5 py-3">Total expense</th><th className="text-right px-5 py-3"></th></tr></thead><tbody>
+                {expensesByDay.length === 0 ? <tr><td colSpan={5} className="text-center px-5 py-10 text-app-faint">No expenses in this period</td></tr> : expensesByDay.map(([day, entries], index) => {
+                  const byBranch = new Map<string, BranchExpenseRecord[]>()
+                  entries.forEach((entry) => { const key = entry.branchId ?? 'unknown'; byBranch.set(key, [...(byBranch.get(key) ?? []), entry]) })
+                  return [...byBranch.entries()].map(([branchId, branchEntries], branchIndex) => <tr key={`${day}-${branchId}`} onClick={() => setActiveExpenseDay(`${day}|${branchId}`)} className={`cursor-pointer hover:bg-primary-50/40 ${index % 2 ? 'bg-app-alt/50' : ''}`}><td className="px-5 py-3">{formatDate(new Date(`${day}T00:00:00`).toISOString())}</td><td className="px-5 py-3">{branchEntries[0].branchName ?? (branchId === 'unknown' ? 'Unknown branch' : '-')}</td><td className="px-5 py-3 text-right">{branchEntries.length}</td><td className="px-5 py-3 text-right font-semibold">{formatCurrency(branchEntries.reduce((sum, e) => sum + e.amount, 0))}</td><td className="px-5 py-3 text-right text-primary">Details →</td></tr>)
+                })}
+              </tbody></table></div>
+            </div>
+          )}
+
+          {reportType === 'adjustments' && (
+            <div className="bg-app-card rounded-card shadow-card overflow-hidden"><div className="px-5 py-4 border-b border-app-border"><h2 className="font-bold text-app-heading">Product stock adjustment history</h2></div><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-app-alt text-app-muted"><tr><th className="text-left px-4 py-3">Product</th><th className="text-right px-4 py-3">Change</th><th className="text-left px-4 py-3">Reason / note</th><th className="text-left px-4 py-3">Branch</th><th className="text-left px-4 py-3">Performed by</th><th className="text-left px-4 py-3">Date</th></tr></thead><tbody>{filteredAdjustments.length ? filteredAdjustments.map((a, i) => <tr key={a.id} className={i % 2 ? 'bg-app-alt/50' : ''}><td className="px-4 py-3 font-medium">{a.productName}</td><td className={`px-4 py-3 text-right font-semibold ${a.quantityChange < 0 ? 'text-danger' : 'text-primary'}`}>{a.quantityChange > 0 ? '+' : ''}{a.quantityChange}</td><td className="px-4 py-3"><span className="capitalize">{a.reason.replaceAll('_', ' ')}</span>{a.note ? <span className="block text-xs text-app-muted">{a.note}</span> : null}</td><td className="px-4 py-3">{a.branchName ?? '-'}</td><td className="px-4 py-3">{a.performedBy}</td><td className="px-4 py-3 text-app-muted">{formatDateTime(a.createdAt)}</td></tr>) : <tr><td colSpan={6} className="text-center px-5 py-10 text-app-faint">No stock adjustments in this period</td></tr>}</tbody></table></div></div>
+          )}
+
           {reportType === 'activity' && (
             <div className="bg-app-card rounded-card shadow-card overflow-hidden">
               <div className="px-5 py-4 border-b border-app-border flex items-center justify-between gap-3">
@@ -696,8 +749,17 @@ function AdminReports() {
       </div>
 
       <SaleDetailModal sale={activeSale} onClose={() => setActiveSale(null)} />
+      <ExpenseDetailsModal detail={activeExpenseDay} expenses={filteredExpenses} onClose={() => setActiveExpenseDay(null)} />
     </DashboardLayout>
   )
+}
+
+function ExpenseDetailsModal({ detail, expenses, onClose }: { detail: string | null; expenses: BranchExpenseRecord[]; onClose: () => void }) {
+  const [day, branchId] = detail?.split('|') ?? []
+  const entries = detail ? expenses.filter((e) => e.createdAt.slice(0, 10) === day && (e.branchId ?? 'unknown') === branchId) : []
+  return <Modal open={!!detail} onClose={onClose} title={`Expenses for ${day ? formatDate(new Date(`${day}T00:00:00`).toISOString()) : ''}`}>
+    <div className="space-y-3"><div className="text-sm text-app-muted">{entries[0]?.branchName ?? ''}</div>{entries.map((e) => <div key={e.id} className="flex justify-between gap-4 border-b border-app-border pb-3 text-sm"><div><div className="font-medium text-app-heading">{e.name}</div><div className="text-xs text-app-muted">{e.recordedBy} · {formatDateTime(e.createdAt)}</div></div><div className="font-semibold">{formatCurrency(e.amount)}</div></div>)}<div className="flex justify-between font-bold pt-1"><span>Total</span><span>{formatCurrency(entries.reduce((sum, e) => sum + e.amount, 0))}</span></div></div>
+  </Modal>
 }
 
 /** Item-and-discount drill-down for a single transaction, admin only -
