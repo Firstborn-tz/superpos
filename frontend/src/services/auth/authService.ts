@@ -83,19 +83,26 @@ function mapFirebaseAuthError(code: string): string {
 
 /** Resolve the familiar branch name to its provisioned Firebase Auth account. */
 export async function loginCashier(branchName: string, password: string): Promise<LoginResult> {
+  let cashierLoginEmail: string | null = null
   try {
     const publicBranches = await getDocs(collection(db, 'public_branches'))
     const branch = publicBranches.docs.map((snapshot) => snapshot.data()).find(
       (entry) => typeof entry.name === 'string' && entry.name.trim().toLowerCase() === branchName.trim().toLowerCase(),
     )
-    if (!branch || typeof branch.id !== 'string') return { ok: false, message: 'Invalid branch name or password.' }
+    if (!branch || typeof branch.id !== 'string') {
+      return { ok: false, message: 'Branch name was not found. Check its spelling or ask the administrator to confirm the branch exists in Firestore.' }
+    }
 
-    const cred = await signInWithEmailAndPassword(auth, cashierAuthEmail(branch.id), password)
+    cashierLoginEmail = cashierAuthEmail(branch.id)
+    const cred = await signInWithEmailAndPassword(auth, cashierLoginEmail, password)
     const access = await getDoc(doc(db, 'cashier_access', cred.user.uid))
     const data = access.data()
     if (!access.exists() || data?.role !== 'cashier' || data.branchId !== branch.id) {
       await signOut(auth)
-      return { ok: false, message: 'This branch cashier account is not configured correctly. Contact your administrator.' }
+      return {
+        ok: false,
+        message: `Cashier Firebase account is signed in, but its access record is missing or incorrect. Create cashier_access/${cred.user.uid} with role (string) cashier and branchId (string) ${branch.id}.`,
+      }
     }
     const token = await cred.user.getIdToken()
     const user: User = {
@@ -111,7 +118,15 @@ export async function loginCashier(branchName: string, password: string): Promis
     if (!navigator.onLine) return { ok: false, message: 'Cashier sign-in requires an internet connection.' }
     const code = err instanceof Error && 'code' in err ? (err as { code: string }).code : undefined
     if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
-      return { ok: false, message: 'Invalid branch name or password.' }
+      return {
+        ok: false,
+        message: `The branch was found, but its Firebase cashier account could not sign in. Create ${cashierLoginEmail ?? 'the branch cashier account'} in Firebase Authentication with the branch password, or reset that account's password.`,
+      }
+    }
+    if (code === 'auth/operation-not-allowed') return { ok: false, message: 'Enable Email/Password sign-in in Firebase Console > Authentication > Sign-in method.' }
+    if (code === 'auth/network-request-failed') return { ok: false, message: 'Network error while signing in. Check the connection and try again.' }
+    if (code === 'permission-denied' || code === 'firestore/permission-denied') {
+      return { ok: false, message: 'Firestore denied branch lookup. Deploy firestore.rules and confirm public_branches allows reads.' }
     }
     return { ok: false, message: code ? `Cashier sign-in failed (${code}).` : 'Cashier login failed. Please try again.' }
   }
