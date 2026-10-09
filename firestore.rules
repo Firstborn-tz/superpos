@@ -116,7 +116,13 @@ service cloud.firestore {
         && request.resource.data.recordedBy is string
         && request.resource.data.branchId is string
         && request.resource.data.branchName is string;
-      allow update, delete: if isAdmin();
+      // An acknowledged-but-interrupted write can be retried against an
+      // existing document. Allow only an identical cashier retry so records
+      // remain immutable after creation.
+      allow update: if isAdmin() || (isCashier()
+        && resource.data.branchId == cashierBranchId()
+        && request.resource.data == resource.data);
+      allow delete: if isAdmin();
     }
 
     match /activity_log/{entryId} {

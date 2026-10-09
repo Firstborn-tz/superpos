@@ -9,6 +9,8 @@ export default function OfflineIndicator() {
   const [showSynced, setShowSynced] = useState(false)
   const [failedOperation, ...errorParts] = (status.lastError ?? '').split(': ')
   const syncError = errorParts.join(': ')
+  const expensePermissionError = failedOperation === 'BRANCH_EXPENSE'
+    && syncError.toLowerCase().includes('missing or insufficient permissions')
 
   useEffect(() => {
     const unsub = syncService.subscribe((next) => {
@@ -41,6 +43,7 @@ export default function OfflineIndicator() {
         <WifiOffIcon width={16} height={16} />
         <span className="flex-1">
           Sync failed while saving {failedOperation || 'data'}: {syncError || 'Unknown error'}. Pending changes are still on this device.
+          {expensePermissionError && ' Deploy firestore.rules with the branch_expenses rule, and confirm cashier_access/{uid}.branchId matches this branch.'}
         </span>
         <button
           onClick={() => void syncService.syncNow()}
