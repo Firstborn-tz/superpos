@@ -10,7 +10,7 @@ import { CalendarIcon, DollarIcon, ReportsIcon } from '@/components/common/Icons
 
 export default function ExpensesPage() {
   const user = useAuthStore((s) => s.user)
-  const { branchExpenses, addBranchExpense } = useDataStore()
+  const { branchExpenses, branches, addBranchExpense } = useDataStore()
   const today = useMemo(() => {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -32,9 +32,14 @@ export default function ExpensesPage() {
       toast.error('Enter an expense name and an amount greater than zero')
       return
     }
+    if (user.role !== 'cashier' || !user.branchId) {
+      toast.error('This cashier account is not linked to a branch. Sign in again or contact your administrator.')
+      return
+    }
+    const branchName = user.branchName ?? branches.find((branch) => branch.id === user.branchId)?.name ?? user.branchId
     const expense = {
       id: generateId('expense'), name: cleanName, amount: value, createdAt: new Date().toISOString(),
-      recordedBy: user.fullName ?? user.email ?? 'Cashier', branchId: user.branchId, branchName: user.branchName,
+      recordedBy: user.fullName ?? user.email ?? 'Cashier', branchId: user.branchId, branchName,
     }
     addBranchExpense(expense)
     syncService.addPendingOperation('BRANCH_EXPENSE', expense)

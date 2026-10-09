@@ -13,6 +13,8 @@ import type {
 } from '@/types'
 import { STORAGE_KEYS, readStorage, writeStorage } from '@/utils/storage'
 import { generateId } from '@/utils/helpers'
+import { onAuthStateChanged } from 'firebase/auth'
+import { auth } from '@/config/firebase'
 import {
   deleteBranchRemote,
   deleteInventoryItemRemote,
@@ -42,6 +44,12 @@ class SyncService {
   }
 
   constructor() {
+    // Firebase restores its persisted user asynchronously on app startup.
+    // Resume queued writes only after Auth confirms a signed-in session.
+    onAuthStateChanged(auth, (user) => {
+      if (user && navigator.onLine) void this.syncNow()
+    })
+
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => {
         this.updateStatus({ isOnline: true })
@@ -184,6 +192,10 @@ class SyncService {
   async syncNow(): Promise<void> {
     if (this.status.isSyncing) return
     if (!navigator.onLine) return
+    // App startup can call syncNow before Firebase has restored its cached
+    // session. Keep operations queued instead of sending unauthenticated
+    // Firestore requests that would be marked as failed.
+    if (!auth.currentUser) return
 
     const pending = this.getPendingOperations()
     if (pending.length === 0) return
@@ -207,7 +219,8 @@ class SyncService {
           console.warn('Could not update branch sync status', err)
         }
       } catch (err) {
-        lastError = err instanceof Error ? err.message : 'Sync failed'
+        const reason = err instanceof Error ? err.message : 'Unknown error'
+        lastError = `${op.type}: ${reason}`
         remaining.push({
           ...op,
           attempts: op.attempts + 1,

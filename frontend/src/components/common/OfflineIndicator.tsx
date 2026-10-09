@@ -7,6 +7,8 @@ import type { SyncStatus } from '@/types'
 export default function OfflineIndicator() {
   const [status, setStatus] = useState<SyncStatus>(syncService.getStatus())
   const [showSynced, setShowSynced] = useState(false)
+  const [failedOperation, ...errorParts] = (status.lastError ?? '').split(': ')
+  const syncError = errorParts.join(': ')
 
   useEffect(() => {
     const unsub = syncService.subscribe((next) => {
@@ -37,7 +39,9 @@ export default function OfflineIndicator() {
     return (
       <div className="flex items-center gap-2 bg-danger text-white text-sm font-medium px-4 py-2 w-full">
         <WifiOffIcon width={16} height={16} />
-        <span className="flex-1">Sync failed. Sales are not yet recorded in the database.</span>
+        <span className="flex-1">
+          Sync failed while saving {failedOperation || 'data'}: {syncError || 'Unknown error'}. Pending changes are still on this device.
+        </span>
         <button
           onClick={() => void syncService.syncNow()}
           className="rounded bg-white/20 hover:bg-white/30 px-2 py-0.5 text-xs font-semibold"

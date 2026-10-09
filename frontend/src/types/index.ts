@@ -152,8 +152,8 @@ export interface BranchExpenseRecord {
   amount: number
   createdAt: string
   recordedBy: string
-  branchId?: string
-  branchName?: string
+  branchId: string
+  branchName: string
 }
 
 export interface HeldSale {
