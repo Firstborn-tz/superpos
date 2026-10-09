@@ -1,13 +1,32 @@
 import { create } from 'zustand'
-import type { ActivityLogEntry, Branch, BranchExpenseRecord, BranchSyncStatus, InventoryItem, RefundRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
+import type { ActivityLogEntry, Branch, BranchExpenseRecord, BranchSyncStatus, InventoryItem, OperationType, PendingOperation, RefundRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
 import { STORAGE_KEYS, readStorage, writeStorage } from '@/utils/storage'
-import { pullAllFromFirestore, pullCashierRecords, pullPublicOperationalData } from '@/services/firebase/firestoreService'
+import { pullAllFromFirestore, pullCashierRecords, pullPublicBranches, pullPublicOperationalData } from '@/services/firebase/firestoreService'
 import { useAuthStore } from '@/store/authStore'
 
 const REFUNDS_KEY = 'superpos_refunds'
 const ADJUSTMENTS_KEY = 'superpos_stock_adjustments'
 const EXPENSES_KEY = 'superpos_branch_expenses'
 const ACTIVITY_LOG_KEY = 'superpos_activity_log'
+
+function overlayPending<T extends { id: string }>(
+  serverRecords: T[],
+  operations: PendingOperation[],
+  writeTypes: OperationType[],
+  deleteType?: OperationType,
+): T[] {
+  const records = new Map(serverRecords.map((record) => [record.id, record]))
+  for (const operation of operations) {
+    if (writeTypes.includes(operation.type)) {
+      const record = operation.payload as T
+      if (record && typeof record.id === 'string') records.set(record.id, record)
+    } else if (deleteType && operation.type === deleteType) {
+      const id = (operation.payload as { id?: unknown } | null)?.id
+      if (typeof id === 'string') records.delete(id)
+    }
+  }
+  return [...records.values()]
+}
 
 interface DataState {
   inventory: InventoryItem[]
@@ -64,21 +83,47 @@ export const useDataStore = create<DataState>((set, get) => ({
   refreshFromServer: async () => {
     if (!navigator.onLine) return
     try {
-      const isAdmin = useAuthStore.getState().user?.role === 'admin'
+      const pendingQueue = readStorage<PendingOperation[]>(STORAGE_KEYS.PENDING_OPERATIONS, [])
+      const currentUser = useAuthStore.getState().user
+      const pending = pendingQueue.filter((operation) => !operation.authUid || operation.authUid === currentUser?.id)
+      const isAdmin = currentUser?.role === 'admin'
+      if (!currentUser) {
+        const publicBranches = await pullPublicBranches()
+        set({ branches: publicBranches.map((branch) => ({ ...branch, password: '' })) })
+        writeStorage(STORAGE_KEYS.BRANCHES, publicBranches.map((branch) => ({ ...branch, password: '' })))
+        return
+      }
       if (!isAdmin) {
-        const { inventory, branches } = await pullPublicOperationalData()
+        const remote = await pullPublicOperationalData()
+        const inventory = overlayPending(remote.inventory, pending, ['ADD_PRODUCT', 'ADD_STOCK', 'UPDATE_PRODUCT'], 'DELETE_PRODUCT')
+        const branches = overlayPending(remote.branches, pending, ['ADD_BRANCH', 'UPDATE_BRANCH_PASSWORD'], 'DELETE_BRANCH')
         const branchId = useAuthStore.getState().user?.branchId
-        const records = branchId ? await pullCashierRecords(branchId) : { sales: [], refunds: [], branchExpenses: [] }
-        set({ inventory, branches, sales: records.sales, refunds: records.refunds, branchExpenses: records.branchExpenses })
+        const remoteRecords = branchId ? await pullCashierRecords(branchId) : { sales: [], refunds: [], branchExpenses: [] }
+        const branchOperations = pending.filter((operation) => {
+          const payload = operation.payload as { branchId?: string } | null
+          return payload?.branchId === branchId
+        })
+        const sales = overlayPending(remoteRecords.sales, branchOperations, ['SALE'])
+        const refunds = overlayPending(remoteRecords.refunds, branchOperations, ['REFUND'])
+        const branchExpenses = overlayPending(remoteRecords.branchExpenses, branchOperations, ['BRANCH_EXPENSE'])
+        set({ inventory, branches, sales, refunds, branchExpenses })
         writeStorage(STORAGE_KEYS.INVENTORY, inventory)
         writeStorage(STORAGE_KEYS.BRANCHES, branches)
-        writeStorage(STORAGE_KEYS.SALES, records.sales)
-        writeStorage(REFUNDS_KEY, records.refunds)
-        writeStorage(EXPENSES_KEY, records.branchExpenses)
+        writeStorage(STORAGE_KEYS.SALES, sales)
+        writeStorage(REFUNDS_KEY, refunds)
+        writeStorage(EXPENSES_KEY, branchExpenses)
         return
       }
 
-      const { inventory, sales, branches, refunds, stockAdjustments, branchExpenses, activityLog, branchSyncs } = await pullAllFromFirestore()
+      const remote = await pullAllFromFirestore()
+      const inventory = overlayPending(remote.inventory, pending, ['ADD_PRODUCT', 'ADD_STOCK', 'UPDATE_PRODUCT'], 'DELETE_PRODUCT')
+      const sales = overlayPending(remote.sales, pending, ['SALE'])
+      const branches = overlayPending(remote.branches, pending, ['ADD_BRANCH', 'UPDATE_BRANCH_PASSWORD'], 'DELETE_BRANCH')
+      const refunds = overlayPending(remote.refunds, pending, ['REFUND'])
+      const stockAdjustments = overlayPending(remote.stockAdjustments, pending, ['STOCK_ADJUSTMENT'])
+      const branchExpenses = overlayPending(remote.branchExpenses, pending, ['BRANCH_EXPENSE'])
+      const activityLog = overlayPending(remote.activityLog, pending, ['ACTIVITY_LOG'])
+      const { branchSyncs } = remote
       set({ inventory, sales, branches, refunds, stockAdjustments, branchExpenses, activityLog, branchSyncs, hydrated: true })
       writeStorage(STORAGE_KEYS.INVENTORY, inventory)
       writeStorage(STORAGE_KEYS.SALES, sales)

@@ -153,7 +153,7 @@ export interface BranchExpenseRecord {
   createdAt: string
   recordedBy: string
   branchId: string
-  branchName: string
+  branchName?: string
 }
 
 export interface HeldSale {
@@ -215,6 +215,8 @@ export type OperationType =
 export interface PendingOperation {
   id: string
   type: OperationType
+  /** Firebase account that created the operation, so another login on a shared till cannot impersonate it. */
+  authUid?: string
   payload: unknown
   createdAt: string
   attempts: number
@@ -228,6 +230,7 @@ export interface SyncStatus {
   pendingCount: number
   lastSyncedAt: string | null
   lastError: string | null
+  waitingForOtherAccount?: boolean
 }
 
 export type ReportPeriod = 'all' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'

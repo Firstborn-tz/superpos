@@ -143,19 +143,20 @@ export async function pushSaleRecord(sale: SaleRecord): Promise<void> {
 export async function pushBranch(branch: Branch): Promise<void> {
   const { password, ...publicBranch } = branch
   void password
-  const branchWrite = setDoc(doc(db, COLLECTIONS.BRANCHES, branch.id), branch, { merge: true })
-
   const adminAccess = auth.currentUser
     ? await getDoc(doc(db, COLLECTIONS.ADMINS, auth.currentUser.uid))
     : null
   // Cashier password updates may change the private branch document only.
   // The public projection deliberately excludes credentials and is admin-only.
   if (!adminAccess?.exists() || adminAccess.data()?.role !== 'admin') {
-    await branchWrite
+    await setDoc(doc(db, COLLECTIONS.BRANCHES, branch.id), branch, { merge: true })
     return
   }
 
-  await Promise.all([branchWrite, setDoc(doc(db, COLLECTIONS.PUBLIC_BRANCHES, branch.id), publicBranch, { merge: true })])
+  await Promise.all([
+    setDoc(doc(db, COLLECTIONS.BRANCHES, branch.id), branch, { merge: true }),
+    setDoc(doc(db, COLLECTIONS.PUBLIC_BRANCHES, branch.id), publicBranch, { merge: true }),
+  ])
 }
 
 export async function deleteBranchRemote(branchId: string): Promise<void> {

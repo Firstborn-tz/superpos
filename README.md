@@ -153,8 +153,8 @@ transactions around stock decrements (see "Extending").
 - [ ] Create the real admin account(s) in Firebase Authentication and remove
       any test accounts.
 - [ ] Review `firestore.rules` against your business's access needs. Sales,
-      refunds, expenses, and stock adjustments are role and branch scoped;
-      inventory, public branch names, and chat currently have public reads.
+      refunds, expenses, stock adjustments, inventory, and chat are protected;
+      only branch names needed for cashier sign-in are publicly readable.
 - [ ] Set Firebase Authentication's authorized domains to your production
       domain (Firebase Console → Authentication → Settings).
 - [ ] Generate real app icons if you want your own branding — replace

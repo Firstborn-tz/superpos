@@ -151,6 +151,7 @@ function ChatThread({ branchId, branchName }: { branchId: string | null; branchN
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
+          maxLength={4000}
           placeholder="Type a message..."
           className="flex-1 px-4 py-2.5 border border-app-border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />

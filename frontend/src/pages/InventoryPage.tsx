@@ -153,8 +153,8 @@ export default function InventoryPage() {
       note: note || undefined,
       createdAt: new Date().toISOString(),
       performedBy: user?.fullName ?? user?.email ?? 'Unknown',
-      branchId: item.branchId,
-      branchName: item.branchName,
+      branchId: item.branchId ?? user?.branchId,
+      branchName: item.branchName ?? user?.branchName,
     }
     addStockAdjustment(adjustment)
     syncService.addPendingOperation('STOCK_ADJUSTMENT', adjustment)

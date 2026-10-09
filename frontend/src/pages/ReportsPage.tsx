@@ -689,7 +689,10 @@ function AdminReports() {
                 {expensesByDay.length === 0 ? <tr><td colSpan={5} className="text-center px-5 py-10 text-app-faint">No expenses in this period</td></tr> : expensesByDay.map(([day, entries], index) => {
                   const byBranch = new Map<string, BranchExpenseRecord[]>()
                   entries.forEach((entry) => { const key = entry.branchId ?? 'unknown'; byBranch.set(key, [...(byBranch.get(key) ?? []), entry]) })
-                  return [...byBranch.entries()].map(([branchId, branchEntries], branchIndex) => <tr key={`${day}-${branchId}`} onClick={() => setActiveExpenseDay(`${day}|${branchId}`)} className={`cursor-pointer hover:bg-primary-50/40 ${index % 2 ? 'bg-app-alt/50' : ''}`}><td className="px-5 py-3">{formatDate(new Date(`${day}T00:00:00`).toISOString())}</td><td className="px-5 py-3">{branchEntries[0].branchName ?? (branchId === 'unknown' ? 'Unknown branch' : '-')}</td><td className="px-5 py-3 text-right">{branchEntries.length}</td><td className="px-5 py-3 text-right font-semibold">{formatCurrency(branchEntries.reduce((sum, e) => sum + e.amount, 0))}</td><td className="px-5 py-3 text-right text-primary">Details →</td></tr>)
+                  return [...byBranch.entries()].map(([branchId, branchEntries]) => {
+                    const branchName = branchEntries[0].branchName ?? branches.find((branch) => branch.id === branchId)?.name ?? (branchId === 'unknown' ? 'Unknown branch' : branchId)
+                    return <tr key={`${day}-${branchId}`} onClick={() => setActiveExpenseDay(`${day}|${branchId}`)} className={`cursor-pointer hover:bg-primary-50/40 ${index % 2 ? 'bg-app-alt/50' : ''}`}><td className="px-5 py-3">{formatDate(new Date(`${day}T00:00:00`).toISOString())}</td><td className="px-5 py-3">{branchName}</td><td className="px-5 py-3 text-right">{branchEntries.length}</td><td className="px-5 py-3 text-right font-semibold">{formatCurrency(branchEntries.reduce((sum, e) => sum + e.amount, 0))}</td><td className="px-5 py-3 text-right text-primary">Details →</td></tr>
+                  })
                 })}
               </tbody></table></div>
             </div>

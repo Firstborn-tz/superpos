@@ -95,6 +95,7 @@ class SyncService {
     const op: PendingOperation = {
       id: generateId('op'),
       type,
+      authUid: auth.currentUser?.uid,
       payload,
       createdAt: new Date().toISOString(),
       attempts: 0,
@@ -197,13 +198,21 @@ class SyncService {
     // Firestore requests that would be marked as failed.
     if (!auth.currentUser) return
 
-    const pending = this.getPendingOperations()
-    if (pending.length === 0) return
+    const allPending = this.getPendingOperations()
+    if (allPending.length === 0) return
+    const currentUid = auth.currentUser.uid
+    const pending = allPending.filter((op) => !op.authUid || op.authUid === currentUid)
+    const waitingForOtherAccount = allPending.some((op) => Boolean(op.authUid && op.authUid !== currentUid))
+    if (pending.length === 0) {
+      this.updateStatus({ isSyncing: false, lastError: null, waitingForOtherAccount })
+      return
+    }
 
-    this.updateStatus({ isSyncing: true, lastError: null })
+    this.updateStatus({ isSyncing: true, lastError: null, waitingForOtherAccount })
 
     const remaining: PendingOperation[] = []
-    const initialOperationIds = new Set(pending.map((op) => op.id))
+    const initialOperationIds = new Set(allPending.map((op) => op.id))
+    const processingOperationIds = new Set(pending.map((op) => op.id))
     let lastError: string | null = null
 
     for (const op of pending) {
@@ -234,12 +243,17 @@ class SyncService {
     // Firestore. Previously this discarded SALE operations that were queued
     // immediately after stock updates, leaving branch-only sales forever
     // absent from the admin database reports.
-    const addedWhileSyncing = this.getPendingOperations().filter((op) => !initialOperationIds.has(op.id))
-    this.setPendingOperations([...remaining, ...addedWhileSyncing])
+    const currentPending = this.getPendingOperations()
+    const waitingOperations = currentPending.filter((op) => initialOperationIds.has(op.id) && !processingOperationIds.has(op.id))
+    const addedWhileSyncing = currentPending.filter((op) => !initialOperationIds.has(op.id))
+    const nextPending = [...remaining, ...waitingOperations, ...addedWhileSyncing]
+    this.setPendingOperations(nextPending)
+    const stillWaitingForOtherAccount = nextPending.some((op) => Boolean(op.authUid && op.authUid !== currentUid))
     this.updateStatus({
       isSyncing: false,
       lastError,
       lastSyncedAt: new Date().toISOString(),
+      waitingForOtherAccount: stillWaitingForOtherAccount,
     })
     writeStorage('superpos_last_synced', new Date().toISOString())
 
