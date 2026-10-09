@@ -31,7 +31,10 @@ export async function loginAdmin(email: string, password: string): Promise<Login
     const access = await getDoc(doc(db, 'admins', cred.user.uid))
     if (!access.exists() || access.data().role !== 'admin') {
       await signOut(auth)
-      return { ok: false, message: 'This Firebase account is not configured as an administrator.' }
+      return {
+        ok: false,
+        message: `This Firebase account is signed in but is not registered as an administrator. In Firestore, create or correct document admins/${cred.user.uid} and set role (string) to admin.`,
+      }
     }
     const token = await cred.user.getIdToken()
     const user: User = {
