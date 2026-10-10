@@ -121,12 +121,13 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (isCashier()
           && resource.data.branchId == cashierBranchId()
-          && validSale(request.resource.data, saleId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['refunded', 'refundedAmount'])
-          && request.resource.data.refunded == true
-          && request.resource.data.get('refundedAmount', 0) is number
-          && request.resource.data.get('refundedAmount', 0) >= resource.data.get('refundedAmount', 0)
-          && request.resource.data.get('refundedAmount', 0) <= resource.data.totalAmount);
+          && (request.resource.data == resource.data
+            || (validSale(request.resource.data, saleId)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['refunded', 'refundedAmount'])
+              && request.resource.data.refunded == true
+              && request.resource.data.get('refundedAmount', 0) is number
+              && request.resource.data.get('refundedAmount', 0) >= resource.data.get('refundedAmount', 0)
+              && request.resource.data.get('refundedAmount', 0) <= resource.data.totalAmount)));
       allow delete: if isAdmin();
     }
 

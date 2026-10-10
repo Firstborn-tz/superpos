@@ -50,6 +50,12 @@ export async function loginAdmin(email: string, password: string): Promise<Login
     }
     const code = err instanceof Error && 'code' in err ? (err as { code: string }).code : undefined
     console.error('Admin login failed:', code, err)
+    if (code === 'permission-denied' || code === 'firestore/permission-denied') {
+      return {
+        ok: false,
+        message: 'Firebase sign-in succeeded, but Firestore denied access to the administrator record. Deploy the repository firestore.rules to project supermarketpos-464da, then confirm admins/{your Firebase UID} exists with role set to admin.',
+      }
+    }
     const message = code ? mapFirebaseAuthError(code) : 'Login failed. Please try again.'
     return { ok: false, message }
   }
