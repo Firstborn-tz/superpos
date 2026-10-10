@@ -733,7 +733,7 @@ function AdminReports() {
                         </td>
                       </tr>
                     ) : (
-                      activityLog.slice(0, 200).map((a, idx) => (
+                      activityLog.map((a, idx) => (
                         <tr key={a.id} className={idx % 2 === 0 ? 'bg-app-card' : 'bg-app-alt/50'}>
                           <td className="px-5 py-3 font-mono text-xs text-app-muted">{a.action}</td>
                           <td className="px-5 py-3">{a.description}</td>

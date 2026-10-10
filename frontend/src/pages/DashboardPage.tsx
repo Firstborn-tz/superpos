@@ -52,12 +52,14 @@ export default function DashboardPage() {
   }, [period, customStart, customEnd])
 
   const filteredSales = useMemo(() => {
+    const branchIdByName = new Map(branches.map((branch) => [branch.name.trim().toLowerCase(), branch.id]))
     return sales.filter((s) => {
-      if (branchFilter !== 'all' && s.branchId !== branchFilter) return false
+      const saleBranchId = s.branchId ?? (s.branchName ? branchIdByName.get(s.branchName.trim().toLowerCase()) : undefined)
+      if (branchFilter !== 'all' && saleBranchId !== branchFilter) return false
       if (!range) return true
       return isWithinRange(s.createdAt, range.start, range.end)
     })
-  }, [sales, branchFilter, range])
+  }, [sales, branches, branchFilter, range])
 
   const filteredInventory = useMemo(() => {
     if (branchFilter === 'all') return inventory

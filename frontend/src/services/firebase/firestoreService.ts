@@ -8,7 +8,6 @@ import {
   deleteDoc,
   query,
   orderBy,
-  limit,
   onSnapshot,
   where,
   writeBatch,
@@ -46,13 +45,13 @@ export async function pullAllFromFirestore(): Promise<{
   // Firestore's persistent local cache; this method explicitly waits for the
   // server instead.
   const [invSnap, salesSnap, branchSnap, refundSnap, adjSnap, expenseSnap, logSnap] = await Promise.all([
-    getDocsFromServer(query(collection(db, COLLECTIONS.INVENTORY), orderBy('createdAt', 'desc'))),
-    getDocsFromServer(query(collection(db, COLLECTIONS.SALES), orderBy('createdAt', 'desc'))),
-    getDocsFromServer(query(collection(db, COLLECTIONS.BRANCHES), orderBy('createdAt', 'desc'))),
-    getDocsFromServer(query(collection(db, COLLECTIONS.REFUNDS), orderBy('createdAt', 'desc'))),
-    getDocsFromServer(query(collection(db, COLLECTIONS.STOCK_ADJUSTMENTS), orderBy('createdAt', 'desc'))),
-    getDocsFromServer(query(collection(db, COLLECTIONS.BRANCH_EXPENSES), orderBy('createdAt', 'desc'))),
-    getDocsFromServer(query(collection(db, COLLECTIONS.ACTIVITY_LOG), orderBy('createdAt', 'desc'), limit(500))),
+    getDocsFromServer(collection(db, COLLECTIONS.INVENTORY)),
+    getDocsFromServer(collection(db, COLLECTIONS.SALES)),
+    getDocsFromServer(collection(db, COLLECTIONS.BRANCHES)),
+    getDocsFromServer(collection(db, COLLECTIONS.REFUNDS)),
+    getDocsFromServer(collection(db, COLLECTIONS.STOCK_ADJUSTMENTS)),
+    getDocsFromServer(collection(db, COLLECTIONS.BRANCH_EXPENSES)),
+    getDocsFromServer(collection(db, COLLECTIONS.ACTIVITY_LOG)),
   ])
 
   // Sync status is helpful context, but it must never prevent sales and

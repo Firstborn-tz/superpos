@@ -109,8 +109,12 @@ service cloud.firestore {
 
     match /sales/{saleId} {
       allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
-      allow create: if validSale(request.resource.data, saleId)
-        && (isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId()));
+      // Administrators may restore historical records with legacy schemas.
+      // Cashier writes still require the complete shape and their own branch.
+      allow create: if isAdmin()
+        || (validSale(request.resource.data, saleId)
+          && isCashier()
+          && request.resource.data.branchId == cashierBranchId());
       // A cashier may only mark an existing sale as refunded and increase
       // its cumulative refunded amount. Refund details are immutable records
       // in /refunds. Exact duplicate retries have no changed fields.

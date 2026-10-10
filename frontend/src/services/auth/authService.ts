@@ -165,29 +165,47 @@ export async function changeBranchPassword(branch: Branch, newPassword: string, 
 }
 
 /**
- * Sends a Firebase-hosted password reset email to the given address.
- * Always returns a generic success message regardless of whether the
- * email actually has an account, to avoid leaking which emails are
- * registered admins (standard security practice for reset flows).
+ * Sends Firebase's hosted password-reset link. The hosted page lets the
+ * administrator choose and confirm a new password; Firebase then completes
+ * the reset without requiring an authenticated session in this app.
  */
 export async function sendAdminPasswordReset(email: string): Promise<{ ok: boolean; message: string }> {
+  const normalizedEmail = email.trim()
+  if (!normalizedEmail) return { ok: false, message: 'Enter the admin email address first.' }
   if (!navigator.onLine) {
     return { ok: false, message: 'You are offline. Connect to the internet to request a password reset.' }
   }
   try {
-    await sendPasswordResetEmail(auth, email.trim())
+    await sendPasswordResetEmail(auth, normalizedEmail)
+    return {
+      ok: true,
+      message: 'Firebase accepted the reset request. Check this email inbox and spam folder for the link, open it, then enter and confirm a new password.',
+    }
   } catch (err) {
     const code = err instanceof Error && 'code' in err ? (err as { code: string }).code : undefined
-    // auth/invalid-email is the only case worth surfacing distinctly - all
-    // other errors (including "user not found") get the same generic
-    // message so the form can't be used to enumerate registered emails.
-    if (code === 'auth/invalid-email') {
-      return { ok: false, message: 'Enter a valid email address.' }
+    // Keep the response generic for unknown addresses to avoid account
+    // enumeration, but surface configuration and delivery failures instead
+    // of falsely telling the admin that Firebase sent a message.
+    switch (code) {
+      case 'auth/invalid-email':
+        return { ok: false, message: 'Enter a valid admin email address.' }
+      case 'auth/user-not-found':
+        return {
+          ok: true,
+          message: 'If an account exists with that email, Firebase will send a password reset link. Check the inbox and spam folder; the link opens a page to enter and confirm a new password.',
+        }
+      case 'auth/operation-not-allowed':
+        return { ok: false, message: 'Password reset is unavailable because Email/Password sign-in is disabled. Enable it in Firebase Console > Authentication > Sign-in method.' }
+      case 'auth/too-many-requests':
+        return { ok: false, message: 'Firebase temporarily blocked reset requests. Wait a while, then try again.' }
+      case 'auth/network-request-failed':
+        return { ok: false, message: 'Firebase could not be reached. Check your internet connection and try again.' }
+      case 'auth/invalid-api-key':
+      case 'auth/api-key-not-valid.-please-pass-a-valid-api-key.':
+        return { ok: false, message: 'Firebase rejected the app API key. Check the production Firebase configuration.' }
+      default:
+        console.error('Admin password reset email failed:', code, err)
+        return { ok: false, message: 'Firebase could not send the reset email. Check Authentication email templates and project settings, then try again.' }
     }
-    console.error('Password reset request failed:', code, err)
-  }
-  return {
-    ok: true,
-    message: 'If an account exists with that email, a password reset link has been sent. Check your inbox (and spam folder).',
   }
 }

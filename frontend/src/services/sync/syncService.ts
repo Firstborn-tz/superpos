@@ -15,6 +15,7 @@ import { STORAGE_KEYS, readStorage, writeStorage } from '@/utils/storage'
 import { generateId } from '@/utils/helpers'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/config/firebase'
+import { useAuthStore } from '@/store/authStore'
 import {
   deleteBranchRemote,
   deleteInventoryItemRemote,
@@ -151,7 +152,16 @@ class SyncService {
         await deleteInventoryItemRemote((op.payload as { id: string }).id)
         return
       case 'SALE':
-        await pushSaleRecord(op.payload as SaleRecord)
+        {
+          const sale = op.payload as SaleRecord
+          const user = useAuthStore.getState().user
+          // Older queued sales can lack branch metadata. Recover it from the
+          // authenticated cashier session before applying branch-scoped rules.
+          const saleWithBranch = user?.role === 'cashier' && user.branchId && !sale.branchId
+            ? { ...sale, branchId: user.branchId, branchName: sale.branchName ?? user.branchName }
+            : sale
+          await pushSaleRecord(saleWithBranch)
+        }
         return
       case 'ADD_BRANCH':
       case 'UPDATE_BRANCH_PASSWORD':
