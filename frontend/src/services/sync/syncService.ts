@@ -212,8 +212,16 @@ class SyncService {
     const allPending = this.getPendingOperations()
     if (allPending.length === 0) return
     const currentUid = auth.currentUser.uid
-    const pending = allPending.filter((op) => !op.authUid || op.authUid === currentUid)
-    const waitingForOtherAccount = allPending.some((op) => Boolean(op.authUid && op.authUid !== currentUid))
+    const isAdmin = useAuthStore.getState().user?.role === 'admin'
+    // Activity logs are append-only audit records and Firestore rules allow
+    // administrators to create them for every branch. Let an admin drain
+    // these device-local records even when a cashier created them earlier;
+    // otherwise they stay queued forever after switching accounts.
+    const canAdminSyncActivity = (op: PendingOperation) => isAdmin && op.type === 'ACTIVITY_LOG'
+    const canSyncOperation = (op: PendingOperation) =>
+      !op.authUid || op.authUid === currentUid || canAdminSyncActivity(op)
+    const pending = allPending.filter(canSyncOperation)
+    const waitingForOtherAccount = allPending.some((op) => Boolean(op.authUid && op.authUid !== currentUid && !canAdminSyncActivity(op)))
     if (pending.length === 0) {
       this.updateStatus({ isSyncing: false, lastError: null, waitingForOtherAccount })
       return
@@ -266,7 +274,9 @@ class SyncService {
     const addedWhileSyncing = currentPending.filter((op) => !initialOperationIds.has(op.id))
     const nextPending = [...remaining, ...waitingOperations, ...addedWhileSyncing]
     this.setPendingOperations(nextPending)
-    const stillWaitingForOtherAccount = nextPending.some((op) => Boolean(op.authUid && op.authUid !== currentUid))
+    const stillWaitingForOtherAccount = nextPending.some((op) => Boolean(
+      op.authUid && op.authUid !== currentUid && !canAdminSyncActivity(op),
+    ))
     const syncedAt = successfulWrites > 0 ? new Date().toISOString() : this.status.lastSyncedAt
     this.updateStatus({
       isSyncing: false,
