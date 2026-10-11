@@ -12,7 +12,7 @@ import {
   formatCurrency,
   formatDate,
   formatDateTime,
-  generateBarcode,
+  generateUniqueBarcode,
   generateBatchNumber,
   generateId,
   isExpired,
@@ -97,7 +97,7 @@ export default function InventoryPage() {
     }
     const item: InventoryItem = {
       id: generateId('inv'),
-      barcode: generateBarcode(),
+      barcode: generateUniqueBarcode(inventory.map((existingItem) => existingItem.barcode)),
       productName: data.productName,
       buyingPrice: data.buyingPrice,
       sellingPrice: data.sellingPrice,

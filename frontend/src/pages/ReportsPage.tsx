@@ -4,7 +4,7 @@ import Modal from '@/components/common/Modal'
 import StatCard from '@/components/common/StatCard'
 import { useAuthStore } from '@/store/authStore'
 import { useDataStore } from '@/store/dataStore'
-import { clearActivityLog as clearActivityLogRemote } from '@/services/firebase/firestoreService'
+import { clearActivityLog as clearActivityLogRemote, permanentlyDeleteSaleAndRestoreStock } from '@/services/firebase/firestoreService'
 import { toast } from '@/store/toastStore'
 import type { BranchExpenseRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
 import {
@@ -769,7 +769,32 @@ function ExpenseDetailsModal({ detail, expenses, onClose }: { detail: string | n
  * shows per-line unit price, quantity, discount %, line total, and the
  * overall profit for the sale. */
 function SaleDetailModal({ sale, onClose }: { sale: SaleRecord | null; onClose: () => void }) {
+  const [deleting, setDeleting] = useState(false)
   if (!sale) return null
+
+  async function undoSale() {
+    if (!sale) return
+    const confirmed = window.confirm(
+      `Permanently delete transaction ${sale.transactionId} (${formatCurrency(sale.totalAmount)}) and return its items to inventory? This cannot be undone.`,
+    )
+    if (!confirmed) return
+
+    setDeleting(true)
+    try {
+      const restoredInventory = await permanentlyDeleteSaleAndRestoreStock(sale.id)
+      const store = useDataStore.getState()
+      store.removeSale(sale.id)
+      const inventoryById = new Map(restoredInventory.map((item) => [item.id, item]))
+      store.setInventory(store.inventory.map((item) => inventoryById.get(item.id) ?? item))
+      void store.refreshFromServer()
+      toast.success('Transaction deleted and stock restored.')
+      onClose()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not undo this transaction.')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   return (
     <Modal open={!!sale} onClose={onClose} title={`Transaction ${sale.transactionId}`} maxWidth="max-w-2xl">
@@ -831,6 +856,19 @@ function SaleDetailModal({ sale, onClose }: { sale: SaleRecord | null; onClose: 
             <div className="text-app-faint text-xs">Profit</div>
             <div className="font-bold text-primary">{formatCurrency(sale.totalProfit)}</div>
           </div>
+        </div>
+
+        <div className="rounded-lg border border-danger/30 bg-danger/5 p-4">
+          <p className="text-sm font-semibold text-danger">Permanently undo this transaction</p>
+          <p className="mt-1 text-xs text-app-muted">The sale will be removed from reports and its items returned to inventory. Refunded sales cannot be deleted.</p>
+          <button
+            type="button"
+            onClick={() => void undoSale()}
+            disabled={deleting}
+            className="mt-3 rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {deleting ? 'Undoing transaction…' : 'Permanently delete and restore stock'}
+          </button>
         </div>
       </div>
     </Modal>

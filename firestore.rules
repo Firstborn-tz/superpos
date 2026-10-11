@@ -96,7 +96,7 @@ service cloud.firestore {
       allow read: if isAdmin() || isCashier();
       allow create: if validInventory(request.resource.data, itemId)
         && (isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId()));
-      allow update: if isAdmin()
+      allow update: if (isAdmin() && request.resource.data.barcode == resource.data.barcode)
         || (isCashier()
           && resource.data.branchId == cashierBranchId()
           && validInventory(request.resource.data, itemId)
@@ -111,10 +111,11 @@ service cloud.firestore {
       allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
       // Administrators may restore historical records with legacy schemas.
       // Cashier writes still require the complete shape and their own branch.
-      allow create: if isAdmin()
+      allow create: if !exists(/databases/$(database)/documents/deleted_sales/$(saleId))
+        && (isAdmin()
         || (validSale(request.resource.data, saleId)
           && isCashier()
-          && request.resource.data.branchId == cashierBranchId());
+          && request.resource.data.branchId == cashierBranchId()));
       // A cashier may only mark an existing sale as refunded and increase
       // its cumulative refunded amount. Refund details are immutable records
       // in /refunds. Exact duplicate retries have no changed fields.
@@ -128,12 +129,20 @@ service cloud.firestore {
               && request.resource.data.get('refundedAmount', 0) is number
               && request.resource.data.get('refundedAmount', 0) >= resource.data.get('refundedAmount', 0)
               && request.resource.data.get('refundedAmount', 0) <= resource.data.totalAmount)));
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() && resource.data.get('refunded', false) != true;
+    }
+
+    // A minimal tombstone blocks offline copies from recreating an undone sale.
+    match /deleted_sales/{saleId} {
+      allow get: if signedIn();
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     match /refunds/{refundId} {
       allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
       allow create: if validRefund(request.resource.data, refundId)
+        && !exists(/databases/$(database)/documents/deleted_sales/$(request.resource.data.originalSaleId))
         && (isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId()));
       allow update: if isAdmin() || (isCashier()
         && resource.data.branchId == cashierBranchId()

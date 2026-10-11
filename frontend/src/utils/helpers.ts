@@ -36,6 +36,16 @@ export function generateBarcode(): string {
   return digits + check.toString()
 }
 
+/** Generates a new product barcode that does not collide with loaded products. */
+export function generateUniqueBarcode(existingBarcodes: Iterable<string>): string {
+  const existing = new Set(existingBarcodes)
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    const barcode = generateBarcode()
+    if (!existing.has(barcode)) return barcode
+  }
+  throw new Error('Could not generate a unique product barcode. Please try again.')
+}
+
 export function generateBatchNumber(): string {
   const d = new Date()
   return `BATCH-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${Math.floor(

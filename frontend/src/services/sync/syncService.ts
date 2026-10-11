@@ -241,6 +241,11 @@ class SyncService {
           console.warn('Could not update branch sync status', err)
         }
       } catch (err) {
+        if (op.type === 'SALE' && err instanceof Error && err.message === 'SALE_PERMANENTLY_DELETED') {
+          // A different admin device may have undone this sale while it was
+          // still queued offline. The tombstone is authoritative; drop it.
+          continue
+        }
         const reason = err instanceof Error ? err.message : 'Unknown error'
         lastError = `${op.type}: ${reason}`
         remaining.push({

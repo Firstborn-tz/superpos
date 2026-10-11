@@ -10,11 +10,14 @@ import {
   orderBy,
   onSnapshot,
   where,
+  runTransaction,
   writeBatch,
   type Unsubscribe,
 } from 'firebase/firestore'
 import { auth, db } from '@/config/firebase'
 import type { ActivityLogEntry, Branch, BranchExpenseRecord, BranchSyncStatus, ChatMessage, InventoryItem, PublicBranch, RefundRecord, SaleRecord, StockAdjustmentRecord } from '@/types'
+import { restockAsBatch } from '@/utils/batches'
+import { formatCurrency } from '@/utils/helpers'
 
 export const COLLECTIONS = {
   BRANCHES: 'branches',
@@ -29,6 +32,7 @@ export const COLLECTIONS = {
   ADMINS: 'admins',
   SETTINGS: 'settings',
   BRANCH_SYNC: 'branch_sync',
+  DELETED_SALES: 'deleted_sales',
 } as const
 
 export async function pullAllFromFirestore(): Promise<{
@@ -136,7 +140,86 @@ export async function pullPublicBranches(): Promise<PublicBranch[]> {
 }
 
 export async function pushSaleRecord(sale: SaleRecord): Promise<void> {
-  await setDoc(doc(db, COLLECTIONS.SALES, sale.id), sale, { merge: true })
+  const saleRef = doc(db, COLLECTIONS.SALES, sale.id)
+  const tombstoneRef = doc(db, COLLECTIONS.DELETED_SALES, sale.id)
+  await runTransaction(db, async (transaction) => {
+    if ((await transaction.get(tombstoneRef)).exists()) {
+      throw new Error('SALE_PERMANENTLY_DELETED')
+    }
+    transaction.set(saleRef, sale, { merge: true })
+  })
+}
+
+/** Permanently removes a sale and restores its stock exactly once. */
+export async function permanentlyDeleteSaleAndRestoreStock(saleId: string): Promise<InventoryItem[]> {
+  const saleRef = doc(db, COLLECTIONS.SALES, saleId)
+  const tombstoneRef = doc(db, COLLECTIONS.DELETED_SALES, saleId)
+  if ((await getDoc(tombstoneRef)).exists()) {
+    throw new Error('This transaction has already been permanently deleted.')
+  }
+  const initialSaleSnapshot = await getDoc(saleRef)
+  if (!initialSaleSnapshot.exists()) throw new Error('This transaction is no longer in the database. Refresh the page and try again.')
+  const initialSale = initialSaleSnapshot.data() as SaleRecord
+  const refundQuery = query(collection(db, COLLECTIONS.REFUNDS), where('originalSaleId', '==', saleId))
+  const [refundSnap, activitySnap] = await Promise.all([
+    getDocsFromServer(refundQuery),
+    getDocsFromServer(query(
+      collection(db, COLLECTIONS.ACTIVITY_LOG),
+      where('description', '==', `Sale ${initialSale.transactionId} - ${formatCurrency(initialSale.totalAmount)}`),
+    )),
+  ])
+  if (!refundSnap.empty) {
+    throw new Error('This transaction has a refund. Resolve the refund before permanently deleting the sale.')
+  }
+
+  return runTransaction(db, async (transaction) => {
+    const [saleSnap, tombstoneSnap] = await Promise.all([
+      transaction.get(saleRef),
+      transaction.get(tombstoneRef),
+    ])
+    if (tombstoneSnap.exists()) throw new Error('This transaction has already been permanently deleted.')
+    if (!saleSnap.exists()) throw new Error('This transaction is no longer in the database. Refresh the page and try again.')
+
+    const sale = saleSnap.data() as SaleRecord
+    if (sale.refunded) {
+      throw new Error('This transaction has a refund. Resolve the refund before permanently deleting the sale.')
+    }
+
+    const quantities = new Map<string, { quantity: number; totalCost: number }>()
+    for (const line of sale.items ?? []) {
+      const inventoryId = line.inventoryId || line.id
+      if (!inventoryId || !Number.isFinite(line.quantity) || line.quantity <= 0) {
+        throw new Error('This transaction has incomplete item data, so stock cannot be restored safely.')
+      }
+      const total = quantities.get(inventoryId) ?? { quantity: 0, totalCost: 0 }
+      total.quantity += line.quantity
+      total.totalCost += line.quantity * (Number.isFinite(line.buyingPrice) ? line.buyingPrice : 0)
+      quantities.set(inventoryId, total)
+    }
+    if (quantities.size === 0) throw new Error('This transaction has no item data to restore.')
+
+    const inventoryRefs = [...quantities.keys()].map((id) => doc(db, COLLECTIONS.INVENTORY, id))
+    const inventorySnapshots = await Promise.all(inventoryRefs.map((ref) => transaction.get(ref)))
+    if (inventorySnapshots.some((snapshot) => !snapshot.exists())) {
+      throw new Error('A product from this transaction no longer exists. Restore that product record before undoing the sale.')
+    }
+
+    const restoredInventory: InventoryItem[] = []
+    inventorySnapshots.forEach((snapshot, index) => {
+      const item = snapshot.data() as InventoryItem
+      const { quantity, totalCost } = quantities.get(item.id)!
+      const restored = restockAsBatch(item, quantity, totalCost / quantity)
+      transaction.set(inventoryRefs[index], restored)
+      restoredInventory.push(restored)
+    })
+
+    transaction.delete(saleRef)
+    activitySnap.docs.forEach((activity) => transaction.delete(activity.ref))
+    // This marker prevents offline copies of the deleted sale from being
+    // uploaded again after the transaction has been undone.
+    transaction.set(tombstoneRef, { id: saleId, deletedAt: new Date().toISOString() })
+    return restoredInventory
+  })
 }
 
 export async function pushBranch(branch: Branch): Promise<void> {
