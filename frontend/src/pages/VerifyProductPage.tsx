@@ -6,7 +6,7 @@ import { useDataStore } from '@/store/dataStore'
 import { useGlobalBarcodeScanner } from '@/hooks/useGlobalBarcodeScanner'
 import { useIsMobileDevice } from '@/hooks/useIsMobileDevice'
 import type { InventoryItem } from '@/types'
-import { isExpired, isExpiringSoon, isLowStock, isOutOfStock } from '@/utils/helpers'
+import { formatCurrency, isExpired, isExpiringSoon, isLowStock, isOutOfStock } from '@/utils/helpers'
 import { SearchIcon, CameraIcon, CheckIcon, WarningIcon, BoxIcon } from '@/components/common/Icons'
 
 function statusFor(item: InventoryItem) {
@@ -102,10 +102,16 @@ export default function VerifyProductPage() {
             <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mb-4 ${status.cls}`}>
               {status.label}
             </span>
-            <div className="bg-app-alt rounded-lg p-5 flex items-center justify-center gap-3">
-              <BoxIcon width={20} height={20} className="text-app-muted" />
-              <div>
-                <div className="text-xs text-app-faint">Available stock</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-app-alt rounded-lg p-5">
+                <div className="text-xs text-app-faint">Selling price</div>
+                <div className="text-xl font-bold text-primary">{formatCurrency(result.sellingPrice)}</div>
+              </div>
+              <div className="bg-app-alt rounded-lg p-5">
+                <div className="flex items-center justify-center gap-2">
+                  <BoxIcon width={18} height={18} className="text-app-muted" />
+                  <div className="text-xs text-app-faint">Available stock</div>
+                </div>
                 <div className="text-3xl font-bold text-app-heading">{result.currentStock}</div>
               </div>
             </div>
@@ -124,7 +130,7 @@ export default function VerifyProductPage() {
 
         {!result && !notFoundCode && (
           <div className="text-center text-app-faint text-sm py-10">
-            Scan or type a barcode to check the product name and stock available.
+            Scan or type a barcode to check the product name, selling price, and stock available.
           </div>
         )}
       </div>
