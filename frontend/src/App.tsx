@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useDataStore } from '@/store/dataStore'
 import { syncService } from '@/services/sync/syncService'
-import { subscribeToAdminDataChanges } from '@/services/firebase/firestoreService'
+import { subscribeToAdminDataChanges, subscribeToInventoryChanges } from '@/services/firebase/firestoreService'
 import { auth } from '@/config/firebase'
 import { useInactivityLogout } from '@/hooks/useInactivityLogout'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
@@ -160,13 +160,14 @@ export default function App() {
   useEffect(() => {
     if (!isAuthenticated) return
     void refreshFromServer()
-    if (userRole !== 'admin') return
-
     let refreshTimer: ReturnType<typeof setTimeout> | undefined
-    const unsubscribe = subscribeToAdminDataChanges(() => {
+    const refresh = () => {
       clearTimeout(refreshTimer)
       refreshTimer = setTimeout(() => void refreshFromServer(), 250)
-    })
+    }
+    const unsubscribe = userRole === 'admin'
+      ? subscribeToAdminDataChanges(refresh)
+      : subscribeToInventoryChanges(refresh)
     return () => {
       clearTimeout(refreshTimer)
       unsubscribe()

@@ -232,11 +232,12 @@ function CashierDailySalesReport() {
 /* every tab.                                                          */
 /* ------------------------------------------------------------------ */
 
-type ReportType = 'sales' | 'profit' | 'inventory' | 'expiry' | 'expenses' | 'adjustments' | 'activity'
+type ReportType = 'sales' | 'branchSales' | 'profit' | 'inventory' | 'expiry' | 'expenses' | 'adjustments' | 'activity'
 type RangeKey = 'daily' | 'weekly' | 'monthly' | 'all'
 
 const REPORT_TYPES: { key: ReportType; label: string }[] = [
   { key: 'sales', label: 'Sales' },
+  { key: 'branchSales', label: 'Branch Sales' },
   { key: 'profit', label: 'Profit' },
   { key: 'inventory', label: 'Inventory' },
   { key: 'expiry', label: 'Expiry' },
@@ -261,6 +262,8 @@ function AdminReports() {
   const [branchFilter, setBranchFilter] = useState<string>('all')
   const [activeSale, setActiveSale] = useState<SaleRecord | null>(null)
   const [activeExpenseDay, setActiveExpenseDay] = useState<string | null>(null)
+  const [branchSalesStart, setBranchSalesStart] = useState(() => new Date().toISOString().slice(0, 10))
+  const [branchSalesEnd, setBranchSalesEnd] = useState(() => new Date().toISOString().slice(0, 10))
 
   const branchScopedSales = useMemo(
     () => (branchFilter === 'all' ? sales : sales.filter((s) => s.branchId === branchFilter)),
@@ -296,6 +299,18 @@ function AdminReports() {
     const { start, end } = getRangeForPeriod(range)
     return branchScopedSales.filter((s) => isWithinRange(s.createdAt, start, end))
   }, [branchScopedSales, range])
+
+  const branchSalesByDay = useMemo(() => {
+    if (branchFilter === 'all') return []
+    const start = startOfDay(new Date(branchSalesStart))
+    const end = endOfDay(new Date(branchSalesEnd))
+    const days = new Map<string, number>()
+    branchScopedSales.filter((sale) => isWithinRange(sale.createdAt, start, end)).forEach((sale) => {
+      const day = sale.createdAt.slice(0, 10)
+      days.set(day, (days.get(day) ?? 0) + sale.totalAmount)
+    })
+    return [...days.entries()].sort(([a], [b]) => b.localeCompare(a))
+  }, [branchScopedSales, branchFilter, branchSalesStart, branchSalesEnd])
 
   const totals = useMemo(() => {
     const totalSales = filteredSales.reduce((s, r) => s + r.totalAmount, 0)
@@ -354,7 +369,9 @@ function AdminReports() {
   }
 
   function handleExport() {
-    if (reportType === 'sales' || reportType === 'profit') {
+    if (reportType === 'branchSales') {
+      exportToCsv('branch-sales-report', branchSalesByDay.map(([date, total]) => ({ Date: date, Branch: branches.find((b) => b.id === branchFilter)?.name ?? '', 'Total Sales': total })))
+    } else if (reportType === 'sales' || reportType === 'profit') {
       exportToCsv(
         `${reportType}-report-${range}`,
         filteredSales.map((s) => ({
@@ -455,6 +472,14 @@ function AdminReports() {
             ))}
           </select>
 
+          {reportType === 'branchSales' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-xs text-app-muted" htmlFor="branch-sales-start">From</label>
+              <input id="branch-sales-start" type="date" value={branchSalesStart} max={branchSalesEnd} onChange={(e) => setBranchSalesStart(e.target.value)} className="px-3 py-1.5 border border-app-border-input rounded-lg text-sm bg-app-card" />
+              <label className="text-xs text-app-muted" htmlFor="branch-sales-end">To</label>
+              <input id="branch-sales-end" type="date" value={branchSalesEnd} min={branchSalesStart} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setBranchSalesEnd(e.target.value)} className="px-3 py-1.5 border border-app-border-input rounded-lg text-sm bg-app-card" />
+            </div>
+          )}
           {(reportType === 'sales' || reportType === 'profit') && (
             <div className="flex gap-2 flex-wrap">
               {RANGES.map((r) => (
@@ -491,6 +516,21 @@ function AdminReports() {
         </div>
 
         <div id="report-print-area">
+          {reportType === 'branchSales' && (
+            <div className="bg-app-card rounded-card shadow-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-app-border">
+                <h2 className="font-bold text-app-heading">{branches.find((b) => b.id === branchFilter)?.name ?? 'Select a branch'} · Daily Total Sales</h2>
+                <p className="mt-1 text-xs text-app-muted">{branchSalesStart} to {branchSalesEnd}</p>
+              </div>
+              {branchFilter === 'all' ? (
+                <p className="px-5 py-10 text-center text-app-muted">Select a branch to view its daily sales.</p>
+              ) : (
+                <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-app-alt text-app-muted"><tr><th className="text-left px-5 py-3 font-semibold">Date</th><th className="text-right px-5 py-3 font-semibold">Total Sales</th></tr></thead><tbody>
+                  {branchSalesByDay.length === 0 ? <tr><td colSpan={2} className="text-center px-5 py-10 text-app-faint">No sales in this date range</td></tr> : branchSalesByDay.map(([date, total], idx) => <tr key={date} className={idx % 2 === 0 ? 'bg-app-card' : 'bg-app-alt/50'}><td className="px-5 py-3">{formatDate(date)}</td><td className="px-5 py-3 text-right font-semibold">{formatCurrency(total)}</td></tr>)}
+                </tbody></table></div>
+              )}
+            </div>
+          )}
           {(reportType === 'sales' || reportType === 'profit') && (
             <div className="space-y-5">
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">

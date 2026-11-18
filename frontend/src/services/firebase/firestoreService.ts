@@ -130,6 +130,13 @@ export function subscribeToAdminDataChanges(onChange: () => void): Unsubscribe {
   return () => unsubs.forEach((unsubscribe) => unsubscribe())
 }
 
+/** Inventory is shared across devices for administrators and cashiers. */
+export function subscribeToInventoryChanges(onChange: () => void): Unsubscribe {
+  return onSnapshot(collection(db, COLLECTIONS.INVENTORY), (snapshot) => {
+    if (!snapshot.metadata.fromCache) onChange()
+  }, (err) => console.error('Inventory subscription error:', err))
+}
+
 /**
  * Fetches the separate, credential-free collection used by the public
  * landing page. Never expose records from the private branches collection.
