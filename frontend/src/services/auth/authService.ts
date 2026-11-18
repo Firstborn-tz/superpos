@@ -50,6 +50,9 @@ export async function loginAdmin(email: string, password: string): Promise<Login
     }
     const code = err instanceof Error && 'code' in err ? (err as { code: string }).code : undefined
     console.error('Admin login failed:', code, err)
+    if (code === 'unavailable' || code === 'firestore/unavailable') {
+      return { ok: false, message: 'Firebase sign-in reached the account service, but the database is unreachable from this device. Check its internet/firewall connection, then retry.' }
+    }
     if (code === 'permission-denied' || code === 'firestore/permission-denied') {
       return {
         ok: false,
@@ -73,6 +76,8 @@ function mapFirebaseAuthError(code: string): string {
       return 'This account has been disabled. Contact your Firebase project admin.'
     case 'auth/operation-not-allowed':
       return 'Email/Password sign-in is not enabled for this Firebase project. Enable it in Firebase Console → Authentication → Sign-in method.'
+    case 'auth/unauthorized-domain':
+      return `This website domain is not authorized for Firebase sign-in. Add ${window.location.hostname} in Firebase Console > Authentication > Settings > Authorized domains.`
     case 'auth/too-many-requests':
       return 'Too many attempts. Please wait a moment and try again.'
     case 'auth/network-request-failed':
@@ -90,6 +95,8 @@ function mapFirebaseAuthError(code: string): string {
 /** Resolve the familiar branch name to its provisioned Firebase Auth account. */
 export async function loginCashier(branchName: string, password: string): Promise<LoginResult> {
   let cashierLoginEmail: string | null = null
+  let branchId: string | null = null
+  let stage: 'branch-lookup' | 'authentication' | 'cashier-access' = 'branch-lookup'
   try {
     const publicBranches = await getDocs(collection(db, 'public_branches'))
     const branch = publicBranches.docs.map((snapshot) => snapshot.data()).find(
@@ -99,8 +106,11 @@ export async function loginCashier(branchName: string, password: string): Promis
       return { ok: false, message: 'Branch name was not found. Check its spelling or ask the administrator to confirm the branch exists in Firestore.' }
     }
 
+    branchId = branch.id
     cashierLoginEmail = cashierAuthEmail(branch.id)
+    stage = 'authentication'
     const cred = await signInWithEmailAndPassword(auth, cashierLoginEmail, password)
+    stage = 'cashier-access'
     const access = await getDoc(doc(db, 'cashier_access', cred.user.uid))
     const data = access.data()
     if (!access.exists() || data?.role !== 'cashier' || data.branchId !== branch.id) {
@@ -130,9 +140,16 @@ export async function loginCashier(branchName: string, password: string): Promis
       }
     }
     if (code === 'auth/operation-not-allowed') return { ok: false, message: 'Enable Email/Password sign-in in Firebase Console > Authentication > Sign-in method.' }
+    if (code === 'auth/unauthorized-domain') return { ok: false, message: `This website domain is not authorized for Firebase sign-in. Add ${window.location.hostname} in Firebase Console > Authentication > Settings > Authorized domains.` }
     if (code === 'auth/network-request-failed') return { ok: false, message: 'Network error while signing in. Check the connection and try again.' }
-    if (code === 'permission-denied' || code === 'firestore/permission-denied') {
+    if (code === 'unavailable' || code === 'firestore/unavailable') return { ok: false, message: 'The database is unreachable from this device. Check its internet/firewall connection, then retry.' }
+    if (code === 'auth/invalid-api-key' || code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.') return { ok: false, message: 'Firebase rejected the app API key. Check the production Firebase configuration.' }
+    if (code === 'auth/too-many-requests') return { ok: false, message: 'Firebase temporarily blocked sign-in attempts. Wait a while, then try again.' }
+    if ((code === 'permission-denied' || code === 'firestore/permission-denied') && stage === 'branch-lookup') {
       return { ok: false, message: 'Firestore denied branch lookup. Deploy firestore.rules and confirm public_branches allows reads.' }
+    }
+    if ((code === 'permission-denied' || code === 'firestore/permission-denied') && stage === 'cashier-access') {
+      return { ok: false, message: `Cashier authentication succeeded, but Firestore denied the cashier access record. Deploy firestore.rules and verify cashier_access/${auth.currentUser?.uid ?? '(unknown)'} has role "cashier" and branchId "${branchId ?? '(unknown)'}".` }
     }
     return { ok: false, message: code ? `Cashier sign-in failed (${code}).` : 'Cashier login failed. Please try again.' }
   }

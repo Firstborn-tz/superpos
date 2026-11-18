@@ -28,6 +28,10 @@ export const db: Firestore = initializeFirestore(app, {
   // User-entered optional fields are often represented as `undefined` in
   // TypeScript. Firestore otherwise rejects the entire queued write.
   ignoreUndefinedProperties: true,
+  // Some store networks/proxies buffer Firestore's streaming transport and
+  // report UNAVAILABLE even though ordinary HTTPS requests work. Long
+  // polling uses request/response cycles that are more compatible there.
+  experimentalForceLongPolling: true,
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager(),
   }),

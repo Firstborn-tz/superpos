@@ -31,6 +31,7 @@ import {
 } from '@/services/firebase/firestoreService'
 
 type Listener = (status: SyncStatus) => void
+const WRITE_ACK_TIMEOUT_MS = 30_000
 
 class SyncService {
   private listeners: Set<Listener> = new Set()
@@ -79,6 +80,23 @@ class SyncService {
   private setPendingOperations(ops: PendingOperation[]) {
     writeStorage(STORAGE_KEYS.PENDING_OPERATIONS, ops)
     this.updateStatus({ pendingCount: ops.length })
+  }
+
+  private async waitForWriteAcknowledgement(op: PendingOperation): Promise<void> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+    try {
+      await Promise.race([
+        this.processOperation(op),
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error(`No database acknowledgement after ${WRITE_ACK_TIMEOUT_MS / 1000} seconds`)),
+            WRITE_ACK_TIMEOUT_MS,
+          )
+        }),
+      ])
+    } finally {
+      if (timeoutId !== undefined) clearTimeout(timeoutId)
+    }
   }
 
   /**
@@ -206,7 +224,7 @@ class SyncService {
 
     for (const op of pending) {
       try {
-        await this.processOperation(op)
+        await this.waitForWriteAcknowledgement(op)
         successfulWrites += 1
         // Branch sync status is informative only. A missing/deferred rule for
         // that status document must never keep a successfully written sale in
