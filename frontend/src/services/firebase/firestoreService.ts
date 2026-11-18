@@ -93,15 +93,33 @@ export async function pullPublicOperationalData(): Promise<Pick<Awaited<ReturnTy
 
 export async function pullCashierRecords(branchId: string): Promise<Pick<Awaited<ReturnType<typeof pullAllFromFirestore>>, 'sales' | 'refunds' | 'branchExpenses'>> {
   const [salesSnap, refundSnap, expenseSnap] = await Promise.all([
-    getDocsFromServer(query(collection(db, COLLECTIONS.SALES), where('branchId', '==', branchId), orderBy('createdAt', 'desc'))),
-    getDocsFromServer(query(collection(db, COLLECTIONS.REFUNDS), where('branchId', '==', branchId), orderBy('createdAt', 'desc'))),
-    getDocsFromServer(query(collection(db, COLLECTIONS.BRANCH_EXPENSES), where('branchId', '==', branchId), orderBy('createdAt', 'desc'))),
+    // Equality filters use Firestore's automatic single-field index. Sort in
+    // the client so cashier sync does not depend on separately deployed
+    // branchId + createdAt composite indexes.
+    getDocsFromServer(query(collection(db, COLLECTIONS.SALES), where('branchId', '==', branchId)))
+      .catch((error) => { throw withFirestoreContext('Sales', error) }),
+    getDocsFromServer(query(collection(db, COLLECTIONS.REFUNDS), where('branchId', '==', branchId)))
+      .catch((error) => { throw withFirestoreContext('Refunds', error) }),
+    getDocsFromServer(query(collection(db, COLLECTIONS.BRANCH_EXPENSES), where('branchId', '==', branchId)))
+      .catch((error) => { throw withFirestoreContext('Branch expenses', error) }),
   ])
+  const newestFirst = <T extends { createdAt: string }>(records: T[]) =>
+    records.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   return {
-    sales: salesSnap.docs.map((d) => d.data() as SaleRecord),
-    refunds: refundSnap.docs.map((d) => d.data() as RefundRecord),
-    branchExpenses: expenseSnap.docs.map((d) => d.data() as BranchExpenseRecord),
+    sales: newestFirst(salesSnap.docs.map((d) => d.data() as SaleRecord)),
+    refunds: newestFirst(refundSnap.docs.map((d) => d.data() as RefundRecord)),
+    branchExpenses: newestFirst(expenseSnap.docs.map((d) => d.data() as BranchExpenseRecord)),
   }
+}
+
+function withFirestoreContext(label: string, error: unknown): Error & { code?: string } {
+  const code = error && typeof error === 'object' && 'code' in error
+    ? String((error as { code: unknown }).code)
+    : undefined
+  const message = error instanceof Error ? error.message : 'Unknown Firestore error'
+  const contextual = new Error(`${label} query failed: ${message}`) as Error & { code?: string }
+  if (code) contextual.code = code
+  return contextual
 }
 
 export async function pushInventoryItem(item: InventoryItem): Promise<void> {

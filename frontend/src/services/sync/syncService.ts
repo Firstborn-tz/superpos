@@ -241,7 +241,10 @@ class SyncService {
           continue
         }
         const reason = err instanceof Error ? err.message : 'Unknown error'
-        lastError = `${op.type}: ${reason}`
+        const errorCode = err && typeof err === 'object' && 'code' in err
+          ? `${String((err as { code: unknown }).code)}: `
+          : ''
+        lastError = `${op.type}: ${errorCode}${reason}`
         remaining.push({
           ...op,
           attempts: op.attempts + 1,
@@ -282,9 +285,11 @@ class SyncService {
   }
 
   reportDatabaseRefresh(error?: unknown) {
-    const refreshError = error
-      ? (error instanceof Error ? error.message : 'Could not read the latest records from the database')
-      : null
+    const errorCode = error && typeof error === 'object' && 'code' in error
+      ? `${String((error as { code: unknown }).code)}: `
+      : ''
+    const message = error instanceof Error ? error.message : 'Could not read the latest records from the database'
+    const refreshError = error ? `${errorCode}${message}` : null
     this.updateStatus({ refreshError })
   }
 }
