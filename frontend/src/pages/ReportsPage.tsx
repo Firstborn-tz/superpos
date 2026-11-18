@@ -11,6 +11,9 @@ import {
   formatCurrency,
   formatDate,
   formatDateTime,
+  formatBusinessDate,
+  getBusinessDateInputValue,
+  getBusinessDayRange,
   getRangeForPeriod,
   isExpired,
   isExpiringSoon,
@@ -56,13 +59,12 @@ function CashierDailySalesReport() {
   const user = useAuthStore((s) => s.user)
   const { sales } = useDataStore()
 
-  const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const todayIso = useMemo(() => getBusinessDateInputValue(), [])
   const [selectedDate, setSelectedDate] = useState(todayIso)
   const [activeSale, setActiveSale] = useState<SaleRecord | null>(null)
 
   const daySales = useMemo(() => {
-    const start = startOfDay(new Date(selectedDate))
-    const end = endOfDay(new Date(selectedDate))
+    const { start, end } = getBusinessDayRange(selectedDate)
     return sales
       .filter((s) => (!user?.branchId || s.branchId === user.branchId) && isWithinRange(s.createdAt, start, end))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -136,7 +138,7 @@ function CashierDailySalesReport() {
             label="Total Sales"
             value={formatCurrency(totals.totalSales)}
             icon={<DollarIcon />}
-            subtext={formatDate(new Date(selectedDate).toISOString())}
+            subtext={formatBusinessDate(selectedDate)}
           />
           <StatCard label="Transactions" value={totals.transactions.toLocaleString()} icon={<ReportsIcon />} accent="secondary" />
           <StatCard label="Items Sold" value={totals.itemsSold.toLocaleString()} icon={<BoxIcon />} />
@@ -150,7 +152,7 @@ function CashierDailySalesReport() {
 
         <div className="bg-app-card rounded-card shadow-card overflow-hidden">
           <div className="px-5 py-4 border-b border-app-border">
-            <h2 className="font-bold text-app-heading">Transactions for {formatDate(new Date(selectedDate).toISOString())}</h2>
+            <h2 className="font-bold text-app-heading">Transactions for {formatBusinessDate(selectedDate)}</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

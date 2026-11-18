@@ -150,9 +150,17 @@ export async function pushSaleRecord(sale: SaleRecord): Promise<void> {
   const saleRef = doc(db, COLLECTIONS.SALES, sale.id)
   const tombstoneRef = doc(db, COLLECTIONS.DELETED_SALES, sale.id)
   await runTransaction(db, async (transaction) => {
-    if ((await transaction.get(tombstoneRef)).exists()) {
+    const [tombstone, existingSale] = await Promise.all([
+      transaction.get(tombstoneRef),
+      transaction.get(saleRef),
+    ])
+    if (tombstone.exists()) {
       throw new Error('SALE_PERMANENTLY_DELETED')
     }
+    // A retry from another device may refer to a sale that already reached
+    // Firestore. Treat that acknowledgement as success without attempting a
+    // cashier-forbidden update to an existing transaction.
+    if (existingSale.exists()) return
     transaction.set(saleRef, sale, { merge: true })
   })
 }

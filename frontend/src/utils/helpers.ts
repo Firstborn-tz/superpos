@@ -62,6 +62,36 @@ export function formatDate(iso: string): string {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+const BUSINESS_TIME_ZONE = 'Africa/Dar_es_Salaam'
+
+/** YYYY-MM-DD for date inputs using Tanzania's business calendar. */
+export function getBusinessDateInputValue(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date)
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? ''
+  return `${value('year')}-${value('month')}-${value('day')}`
+}
+
+/** Convert a Tanzania calendar date to inclusive UTC bounds for stored timestamps. */
+export function getBusinessDayRange(dateValue: string): { start: Date; end: Date } {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue)
+  if (!match) return { start: new Date(Number.NaN), end: new Date(Number.NaN) }
+  const [, year, month, day] = match
+  const localMidnightAsUtc = Date.UTC(Number(year), Number(month) - 1, Number(day))
+  const start = new Date(localMidnightAsUtc - 3 * 60 * 60 * 1000)
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1)
+  return { start, end }
+}
+
+export function formatBusinessDate(dateValue: string): string {
+  const { start } = getBusinessDayRange(dateValue)
+  return Number.isNaN(start.getTime()) ? dateValue : start.toLocaleDateString('en-GB', { timeZone: BUSINESS_TIME_ZONE, day: '2-digit', month: 'short', year: 'numeric' })
+}
+
 export function formatDateTime(iso: string): string {
   const d = new Date(iso)
   return `${formatDate(iso)} ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`

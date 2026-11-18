@@ -32,8 +32,6 @@ import {
 
 type Listener = (status: SyncStatus) => void
 
-const SYNCED_SALE_IDS_KEY = 'superpos_synced_sale_ids'
-
 class SyncService {
   private listeners: Set<Listener> = new Set()
   private status: SyncStatus = {
@@ -110,35 +108,6 @@ class SyncService {
       void this.syncNow()
     }
     return op
-  }
-
-  /**
-   * Restores sales recorded by older app versions that were kept locally but
-   * lost from the pending queue during an overlapping stock sync. Firestore
-   * writes use the sale ID, so re-sending a sale is idempotent.
-   */
-  reconcileSales(sales: SaleRecord[], branchId?: string) {
-    if (!branchId) return
-    const syncedIds = new Set(readStorage<string[]>(SYNCED_SALE_IDS_KEY, []))
-    const queuedSaleIds = new Set(
-      this.getPendingOperations()
-        .filter((op) => op.type === 'SALE')
-        .map((op) => (op.payload as SaleRecord).id),
-    )
-
-    for (const sale of sales) {
-      if (sale.branchId !== branchId || syncedIds.has(sale.id) || queuedSaleIds.has(sale.id)) continue
-      queuedSaleIds.add(sale.id)
-      this.addPendingOperation('SALE', sale)
-    }
-  }
-
-  private rememberSyncedSale(saleId: string) {
-    const ids = new Set(readStorage<string[]>(SYNCED_SALE_IDS_KEY, []))
-    ids.add(saleId)
-    // Bound this device-side acknowledgement history while retaining enough
-    // IDs to recover normal offline work without re-uploading every sale.
-    writeStorage(SYNCED_SALE_IDS_KEY, [...ids].slice(-5000))
   }
 
   async processOperation(op: PendingOperation): Promise<void> {
@@ -239,7 +208,6 @@ class SyncService {
       try {
         await this.processOperation(op)
         successfulWrites += 1
-        if (op.type === 'SALE') this.rememberSyncedSale((op.payload as SaleRecord).id)
         // Branch sync status is informative only. A missing/deferred rule for
         // that status document must never keep a successfully written sale in
         // the queue or make the cashier believe it was not recorded.
