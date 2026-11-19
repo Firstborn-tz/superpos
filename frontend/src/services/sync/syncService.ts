@@ -227,11 +227,13 @@ class SyncService {
     const processingOperationIds = new Set(pending.map((op) => op.id))
     let lastError: string | null = null
     let successfulWrites = 0
+    const successfulWritesByAccount = new Map<string, string>()
 
     for (const op of pending) {
       try {
         await this.waitForWriteAcknowledgement(op)
         successfulWrites += 1
+        successfulWritesByAccount.set(op.authUid ?? currentUid, new Date().toISOString())
         // Branch sync status is informative only. A missing/deferred rule for
         // that status document must never keep a successfully written sale in
         // the queue or make the cashier believe it was not recorded.
@@ -280,6 +282,9 @@ class SyncService {
       waitingForOtherAccount: stillWaitingForOtherAccount,
     })
     if (successfulWrites > 0) writeStorage('superpos_last_synced', syncedAt)
+    successfulWritesByAccount.forEach((accountSyncedAt, uid) => {
+      writeStorage(`superpos_last_synced_${uid}`, accountSyncedAt)
+    })
 
     // The callers that added these operations already tried to sync while
     // this batch was active. Start a fresh batch now that it is safe.
