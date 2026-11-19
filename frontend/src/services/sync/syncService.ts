@@ -129,6 +129,16 @@ class SyncService {
   }
 
   async processOperation(op: PendingOperation): Promise<void> {
+    const user = useAuthStore.getState().user
+    // Records created by older app versions may have been saved locally
+    // before branch metadata was added to their schemas. Cashier rules scope
+    // these writes to the cashier's assigned branch, so restore that metadata
+    // before sending the queued record. Never replace an explicit branch.
+    const withCashierBranch = <T extends { branchId?: string; branchName?: string }>(record: T): T =>
+      user?.role === 'cashier' && user.branchId && !record.branchId
+        ? { ...record, branchId: user.branchId, branchName: record.branchName ?? user.branchName }
+        : record
+
     switch (op.type) {
       case 'ADD_PRODUCT':
       case 'ADD_STOCK':
@@ -141,13 +151,9 @@ class SyncService {
       case 'SALE':
         {
           const sale = op.payload as SaleRecord
-          const user = useAuthStore.getState().user
           // Older queued sales can lack branch metadata. Recover it from the
           // authenticated cashier session before applying branch-scoped rules.
-          const saleWithBranch = user?.role === 'cashier' && user.branchId && !sale.branchId
-            ? { ...sale, branchId: user.branchId, branchName: sale.branchName ?? user.branchName }
-            : sale
-          await pushSaleRecord(saleWithBranch)
+          await pushSaleRecord(withCashierBranch(sale))
         }
         return
       case 'ADD_BRANCH':
@@ -158,19 +164,19 @@ class SyncService {
         await deleteBranchRemote((op.payload as { id: string }).id)
         return
       case 'REFUND':
-        await pushRefundRecord(op.payload as RefundRecord)
+        await pushRefundRecord(withCashierBranch(op.payload as RefundRecord))
         return
       case 'STOCK_ADJUSTMENT':
-        await pushStockAdjustment(op.payload as StockAdjustmentRecord)
+        await pushStockAdjustment(withCashierBranch(op.payload as StockAdjustmentRecord))
         return
       case 'BRANCH_EXPENSE':
-        await pushBranchExpense(op.payload as BranchExpenseRecord)
+        await pushBranchExpense(withCashierBranch(op.payload as BranchExpenseRecord))
         return
       case 'ACTIVITY_LOG':
-        await pushActivityLogEntry(op.payload as ActivityLogEntry)
+        await pushActivityLogEntry(withCashierBranch(op.payload as ActivityLogEntry))
         return
       case 'CHAT_MESSAGE':
-        await pushChatMessage(op.payload as ChatMessage)
+        await pushChatMessage(withCashierBranch(op.payload as ChatMessage))
         return
       default:
         throw new Error(`Unknown operation type: ${op.type}`)
