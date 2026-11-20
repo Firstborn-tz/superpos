@@ -30,7 +30,7 @@ service cloud.firestore {
         && data.productName is string
         && data.productName.size() > 0
         && data.buyingPrice is number && data.buyingPrice >= 0
-        && data.sellingPrice is number && data.sellingPrice >= data.buyingPrice
+        && data.sellingPrice is number && data.sellingPrice >= 0
         && data.currentStock is number && data.currentStock >= 0
         && data.initialStock is number && data.initialStock >= 0
         && data.createdAt is string;
@@ -95,12 +95,17 @@ service cloud.firestore {
     match /inventory/{itemId} {
       allow read: if isAdmin() || isCashier();
       allow create: if validInventory(request.resource.data, itemId)
+        && request.resource.data.sellingPrice >= request.resource.data.buyingPrice
         && (isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId()));
       allow update: if (isAdmin() && request.resource.data.barcode == resource.data.barcode
-        && validInventory(request.resource.data, itemId))
+        && validInventory(request.resource.data, itemId)
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['sellingPrice'])
+          || request.resource.data.sellingPrice >= request.resource.data.buyingPrice))
         || (isCashier()
           && resource.data.branchId == cashierBranchId()
           && validInventory(request.resource.data, itemId)
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['sellingPrice'])
+            || request.resource.data.sellingPrice >= request.resource.data.buyingPrice)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'currentStock', 'initialStock', 'buyingPrice', 'expiryDate', 'batchNumber',
             'batches', 'hasExpiredBatches', 'expiredQuantity', 'updatedAt'
