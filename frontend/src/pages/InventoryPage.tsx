@@ -183,6 +183,10 @@ export default function InventoryPage() {
 
   function handleUpdatePrices(item: InventoryItem, buyingPrice: number, sellingPrice: number) {
     if (!isAdmin) return
+    if (!Number.isFinite(buyingPrice) || !Number.isFinite(sellingPrice) || buyingPrice < 0 || sellingPrice < buyingPrice) {
+      toast.error('Selling price cannot be lower than the buying price.')
+      return
+    }
     const updated = { ...item, buyingPrice, sellingPrice, updatedAt: new Date().toISOString() }
     upsertInventoryItem(updated)
     syncService.addPendingOperation('UPDATE_PRODUCT', updated)
@@ -854,7 +858,7 @@ function AddProductModal({
       setError('Please fill in all fields with valid values.')
       return
     }
-    if (sp < bp) {
+    if (bp < 0 || sp < bp) {
       setError('Selling price should not be lower than the buying price per unit.')
       return
     }

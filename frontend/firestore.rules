@@ -30,7 +30,7 @@ service cloud.firestore {
         && data.productName is string
         && data.productName.size() > 0
         && data.buyingPrice is number && data.buyingPrice >= 0
-        && data.sellingPrice is number && data.sellingPrice >= 0
+        && data.sellingPrice is number && data.sellingPrice >= data.buyingPrice
         && data.currentStock is number && data.currentStock >= 0
         && data.initialStock is number && data.initialStock >= 0
         && data.createdAt is string;
@@ -96,7 +96,8 @@ service cloud.firestore {
       allow read: if isAdmin() || isCashier();
       allow create: if validInventory(request.resource.data, itemId)
         && (isAdmin() || (isCashier() && request.resource.data.branchId == cashierBranchId()));
-      allow update: if (isAdmin() && request.resource.data.barcode == resource.data.barcode)
+      allow update: if (isAdmin() && request.resource.data.barcode == resource.data.barcode
+        && validInventory(request.resource.data, itemId))
         || (isCashier()
           && resource.data.branchId == cashierBranchId()
           && validInventory(request.resource.data, itemId)
@@ -108,7 +109,13 @@ service cloud.firestore {
     }
 
     match /sales/{saleId} {
-      allow read: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
+      // Cashier sale uploads use a transaction to check whether the sale
+      // already exists. Permit that point lookup when the document is absent;
+      // existing records remain branch-scoped, and list queries stay scoped.
+      allow get: if isAdmin() || (isCashier()
+        && (!exists(/databases/$(database)/documents/sales/$(saleId))
+          || resource.data.branchId == cashierBranchId()));
+      allow list: if isAdmin() || (isCashier() && resource.data.branchId == cashierBranchId());
       // Administrators may restore historical records with legacy schemas.
       // Cashier writes still require the complete shape and their own branch.
       allow create: if !exists(/databases/$(database)/documents/deleted_sales/$(saleId))
